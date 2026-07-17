@@ -656,6 +656,15 @@ pozostaje domyślną ścieżką. Ranking włącza się jawnie dla fallbacku:
 node tools/discover-sources.mjs --lp 1 --refresh --url-ranking
 ```
 
+Do kontrolowanego benchmarku bez wywołań LLM użyj:
+
+```bash
+node tools/prepare-batch.mjs --from 6 --limit 1 --refresh --url-ranking-deterministic
+```
+
+Flaga `--url-ranking-deterministic` wyłącza OpenCode wyłącznie dla danego
+przebiegu; nie zmienia domyślnego trybu kolejnych uruchomień.
+
 Etap ten najpierw zapisuje per-bank manifest metadanych URL-i, następnie wywołuje
 agenta `bank-market-url-ranker` z projektu OpenCode i waliduje odpowiedź. Przy
 braku OpenCode, błędzie odpowiedzi albo niepoprawnym JSON używany jest

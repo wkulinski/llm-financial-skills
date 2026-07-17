@@ -18,6 +18,7 @@ program
     .option('--run-id <id>', 'run identifier propagated to generated artifacts')
     .option('--skip-discovery', 'reuse existing candidates cache and skip discover-sources')
     .option('--url-ranking', 'rank fallback URLs with the configured OpenCode subagent')
+    .option('--url-ranking-deterministic', 'use deterministic ranking instead of OpenCode')
     .option('--google-host <host>', 'Google host override')
     .option('--google-base-url <url>', 'Google base URL override for controlled providers')
     .option('--changed-only', 'only continue when source content changed since last fetch')
@@ -114,7 +115,7 @@ async function refreshSources() {
                 ...(opts.skipUnchanged ? ['--skip-unchanged'] : []),
                 ...(opts.googleHost ? ['--google-host', opts.googleHost] : []),
                 ...(opts.googleBaseUrl ? ['--google-base-url', opts.googleBaseUrl] : []),
-                ...(opts.urlRanking ? ['--url-ranking'] : []),
+                ...(opts.urlRanking || opts.urlRankingDeterministic ? [opts.urlRankingDeterministic ? '--url-ranking-deterministic' : '--url-ranking'] : []),
                 '--source-refresh-run-id', runId
             ]);
             const cacheDir = dataPath('cache/institutions', `${String(inst.lp).padStart(3, '0')}-${slug(inst.name)}`);
@@ -226,7 +227,7 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
                 ...(opts.skipUnchanged ? ['--skip-unchanged'] : []),
                 ...(opts.googleHost ? ['--google-host', opts.googleHost] : []),
                 ...(opts.googleBaseUrl ? ['--google-base-url', opts.googleBaseUrl] : []),
-                ...(opts.urlRanking ? ['--url-ranking'] : [])
+                ...(opts.urlRanking || opts.urlRankingDeterministic ? [opts.urlRankingDeterministic ? '--url-ranking-deterministic' : '--url-ranking'] : [])
             ];
             run([
                 ...discoveryArgs

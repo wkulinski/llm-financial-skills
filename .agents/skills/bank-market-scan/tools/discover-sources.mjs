@@ -455,7 +455,7 @@ if (fallback) {
     const alreadyFetched = new Set(fetched.map(candidate => candidate.url));
     const crawlCandidates = crawl.candidates.filter(candidate => !alreadyFetched.has(candidate.url));
     let fallbackCandidates = crawlCandidates;
-    if (opts.urlRanking) {
+    if (opts.urlRanking || opts.urlRankingDeterministic) {
         const rankingCandidates = uniqueCandidates([...fetched, ...crawlCandidates]);
         const manifest = buildRankingManifest({
             institution: {

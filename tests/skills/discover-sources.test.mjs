@@ -211,7 +211,7 @@ describe('discover-sources search-first integration', () => {
         });
         try {
             projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
-            await runDiscover(root, serverInfo.baseUrl, ['--url-ranking', '--url-ranking-deterministic']);
+            await runDiscover(root, serverInfo.baseUrl, ['--url-ranking-deterministic']);
             const candidates = readCandidates(root);
             const fetchedCandidateRequests = requests.filter(pathname => /^\/candidate-\d+$/.test(pathname));
             expect(candidates.discovery_mode).toBe('crawl_fallback');
