@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "primary_source", "institutions"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "primary_source": {"type": "object"},
+    "control_sources": {"type": "array"},
+    "institutions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["institution_id", "lp", "type", "name"],
+        "properties": {
+          "institution_id": {"type": "string"},
+          "lp": {"type": "integer"},
+          "type": {"enum": ["bank_spoldzielczy", "skok"]},
+          "type_label": {"type": "string"},
+          "name": {"type": "string"},
+          "website_url": {"type": ["string", "null"]},
+          "allowed_source_hosts": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "source": {"type": "object"},
+          "knf_cross_check": {"type": "object"},
+          "base_list_status": {"type": "string"},
+          "base_list_notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}

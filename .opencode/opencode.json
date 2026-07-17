@@ -1,0 +1,14 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "skills": {
+        "paths": [
+            ".agents/skills"
+        ]
+    },
+    "references": {
+        "bank-market-scan-plan": {
+            "path": "docs/draft/bank-market-scan-subagent-discovery-plan.md",
+            "description": "Contract for URL discovery and ranking subagent"
+        }
+    }
+}

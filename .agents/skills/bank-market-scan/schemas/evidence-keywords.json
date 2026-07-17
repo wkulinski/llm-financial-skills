@@ -1,0 +1,48 @@
+{
+  "product": [
+    "kredyt mieszkaniowy",
+    "kredyt hipoteczny",
+    "mieszkaniowo-hipoteczny",
+    "cele mieszkaniowe",
+    "mój dom",
+    "moje 4 kąty",
+    "własny kąt"
+  ],
+  "refinancing": [
+    "spłata kredytu mieszkaniowego",
+    "spłata innych kredytów",
+    "spłata innych kredytów zaciągniętych",
+    "spłata kredytów zaciągniętych",
+    "spłata innego kredytu mieszkaniowego",
+    "spłata wcześniejszego kredytu",
+    "spłata zadłużenia z tytułu kredytu mieszkaniowego",
+    "spłatę zadłużenia z tytułu innego kredytu mieszkaniowego",
+    "refinansowanie kredytu",
+    "refinansowanie obecnego kredytu",
+    "przeniesienie kredytu",
+    "saldo kredytu",
+    "zaświadczenie z banku o saldzie"
+  ],
+  "fixed_rate": [
+    "okresowo stałe",
+    "okresowo-stałe",
+    "okresowo stałej",
+    "okresowo stałą",
+    "stała stopa",
+    "oprocentowanie stałe",
+    "oprocentowanie okresowo stałe",
+    "60 miesięcy",
+    "5 lat",
+    "pierwszych 60 miesięcy"
+  ],
+  "pricing": [
+    "RRSO",
+    "rzeczywista roczna stopa oprocentowania",
+    "prowizja",
+    "marża",
+    "oprocentowanie",
+    "tabela oprocentowania",
+    "taryfa opłat",
+    "taryfa prowizji"
+  ]
+}

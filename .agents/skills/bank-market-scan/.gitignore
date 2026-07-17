@@ -1,0 +1,7 @@
+node_modules/
+data/cache/
+data/base/*.raw.html
+data/base/*.raw.json
+data/exports/*.xlsx
+*.log
+.DS_Store

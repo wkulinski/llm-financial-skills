@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "institution_id": "bank_test",
+  "lp": 999,
+  "name": "Bank Testowy",
+  "homepage_url": "https://bank.example/",
+  "run_id": "run-subagent-test",
+  "candidates": [
+    {
+      "candidate_ref": "c0001",
+      "candidate_id": "url-test-product",
+      "url": "https://bank.example/kredyt-mieszkaniowy",
+      "title": "Kredyt mieszkaniowy",
+      "anchor_text": "Kredyty mieszkaniowe",
+      "source": "homepage",
+      "relation": "same_host",
+      "technical_status": "candidate"
+    },
+    {
+      "candidate_ref": "c0002",
+      "candidate_id": "url-test-rate",
+      "url": "https://bank.example/tabela-oprocentowania.pdf",
+      "title": "Tabela oprocentowania",
+      "anchor_text": "Oprocentowanie kredytów",
+      "source": "sitemap",
+      "relation": "same_host",
+      "technical_status": "candidate"
+    },
+    {
+      "candidate_ref": "c0003",
+      "candidate_id": "url-test-noise",
+      "url": "https://bank.example/karta-kredytowa",
+      "title": "Karta kredytowa",
+      "anchor_text": "Karta kredytowa",
+      "source": "homepage",
+      "relation": "same_host",
+      "technical_status": "candidate"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "institution_id", "lp", "name", "homepage_url", "run_id", "candidates"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "institution_id": {"type": "string", "minLength": 1},
+    "lp": {"type": "integer"},
+    "name": {"type": "string"},
+    "homepage_url": {"type": "string", "format": "uri"},
+    "run_id": {"type": "string", "minLength": 1},
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["candidate_ref", "candidate_id", "url", "title", "anchor_text", "source", "relation", "technical_status"],
+        "properties": {
+          "candidate_id": {"type": "string", "minLength": 1},
+          "candidate_ref": {"type": "string", "pattern": "^c[0-9]{4}$"},
+          "url": {"type": "string", "format": "uri"},
+          "title": {"type": "string"},
+          "anchor_text": {"type": "string"},
+          "source": {"type": "string"},
+          "relation": {"type": "string"},
+          "technical_status": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

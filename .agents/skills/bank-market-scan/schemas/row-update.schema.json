@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["institution_id", "lp", "review_status", "checked_at", "website_available", "qualifies"],
+  "properties": {
+    "institution_id": {"type": "string"},
+    "lp": {"type": "integer"},
+    "review_status": {"enum": ["unchecked", "checked", "needs_review", "error"]},
+    "checked_at": {"type": ["string", "null"]},
+    "website_available": {"type": ["boolean", "null"]},
+    "qualifies": {"type": ["boolean", "null"]},
+    "status_text": {"type": "string"},
+    "qualification": {
+      "type": "object",
+      "properties": {
+        "housing_or_mortgage_loan_confirmed": {"type": ["boolean", "null"]},
+        "refinance_or_repayment_of_previous_housing_mortgage_loan_confirmed": {"type": ["boolean", "null"]},
+        "periodically_fixed_rate_confirmed": {"type": ["boolean", "null"]},
+        "reason_codes": {"type": "array", "items": {"type": "string"}},
+        "non_qualification_reason_codes": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "decision_audit": {
+      "type": "object",
+      "required": ["product_scope", "same_product_variant_confirmed", "criterion_evidence_urls"],
+      "properties": {
+        "product_scope": {"type": "string"},
+        "same_product_variant_confirmed": {"type": "boolean"},
+        "criterion_evidence_urls": {
+          "type": "object",
+          "required": ["housing", "refinancing", "fixed_rate"],
+          "properties": {
+            "housing": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "refinancing": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "fixed_rate": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+          },
+          "additionalProperties": true
+        },
+        "excluded_alternative_sources": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "offer": {"type": "object", "additionalProperties": true},
+    "requirements": {"type": "object", "additionalProperties": true},
+    "promotion": {"type": "object", "additionalProperties": true},
+    "professional_groups": {"type": "object", "additionalProperties": true},
+    "documents": {"type": "object", "additionalProperties": true},
+    "source_urls": {"type": "object", "additionalProperties": true},
+    "field_status": {
+      "type": "object",
+      "additionalProperties": {"enum": ["found", "not_found", "not_applicable", "ambiguous", "not_checked"]}
+    },
+    "field_evidence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "evidence_id": {"type": "string"},
+            "url": {"type": "string"},
+            "source_type": {"type": "string"},
+            "fetched_at": {"type": "string"},
+            "text_excerpt": {"type": "string"},
+            "confidence": {"enum": ["high", "medium", "low"]},
+            "notes": {"type": "string"}
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+    "research_notes": {"type": "string"},
+    "basis": {"type": "string"}
+  },
+  "additionalProperties": true
+}

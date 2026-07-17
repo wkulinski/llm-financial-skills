@@ -1,0 +1,24 @@
+{
+    "name": "llm-financial-skills",
+    "version": "1.1.0",
+    "description": "Codex skill and local tools for recurring analysis of Polish cooperative banks and SKOK mortgage refinancing offers with periodically fixed rates.",
+    "type": "module",
+    "private": true,
+    "workspaces": [
+        ".agents/skills/bank-market-scan"
+    ],
+    "scripts": {
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "dependencies": {
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "devDependencies": {
+        "vitest": "^2.1.9"
+    },
+    "overrides": {
+    }
+}

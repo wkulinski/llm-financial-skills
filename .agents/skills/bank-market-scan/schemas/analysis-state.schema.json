@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "rows"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "updated_at": {"type": "string"},
+    "methodology_version": {"type": "string"},
+    "rows": {"type": "array", "items": {"$ref": "row-update.schema.json"}}
+  },
+  "additionalProperties": true
+}

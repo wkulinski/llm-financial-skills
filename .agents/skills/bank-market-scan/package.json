@@ -1,0 +1,46 @@
+{
+    "name": "bank-market-scan",
+    "version": "1.1.0",
+    "description": "Codex skill and local tools for recurring analysis of Polish cooperative banks and SKOK mortgage refinancing offers with periodically fixed rates.",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "init": "node tools/init-project.mjs",
+        "build-list": "node tools/build-institution-list.mjs",
+        "next": "node tools/next-batch.mjs",
+        "prepare-batch": "node tools/prepare-batch.mjs",
+        "review-batch": "node tools/review-batch.mjs",
+        "retry-batch": "node tools/retry-batch.mjs",
+        "review-manifest": "node tools/review-manifest.mjs",
+        "create-url-manifest": "node tools/create-url-manifest.mjs",
+        "run-url-ranking": "node tools/run-url-ranking.mjs",
+        "validate-url-ranking": "node tools/validate-url-ranking.mjs",
+        "expand-url-ranking": "node tools/expand-url-ranking.mjs",
+        "pack": "node tools/prepare-review-pack.mjs",
+        "apply": "node tools/apply-row-update.mjs",
+        "validate": "node tools/validate-state.mjs",
+        "export": "node tools/export-workbook.mjs",
+        "progress": "node tools/progress-report.mjs",
+        "queue": "node tools/queue-report.mjs",
+        "check": "node --check tools/*.mjs tools/lib/*.mjs",
+        "audit": "node tools/audit-report.mjs"
+    },
+    "dependencies": {
+        "cheerio": "^1.0.0",
+        "commander": "^12.1.0",
+        "exceljs": "^4.4.0",
+        "fast-xml-parser": "^5.9.3",
+        "html-to-text": "^9.0.5",
+        "p-limit": "^6.1.0",
+        "pdf-parse": "^1.1.1",
+        "zod": "^3.23.8"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "devDependencies": {
+    },
+    "overrides": {
+        "uuid": "^11.1.1"
+    }
+}
