@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/interpretation-result.schema.json",
+  "title": "InterpretationResult",
+  "description": "Terminal per-entry result: either a business decision or an explicit technical error without decision data.",
+  "oneOf": [
+    {"$ref": "#/$defs/business_result"},
+    {"$ref": "#/$defs/technical_error_result"}
+  ],
+  "$defs": {
+    "business_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "entry_id",
+        "institution_id",
+        "decision_status",
+        "product_bundle",
+        "criterion_status",
+        "qualification",
+        "offer",
+        "field_status",
+        "field_evidence",
+        "warnings",
+        "interpreter_version"
+      ],
+      "properties": {
+        "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+        "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+        "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+        "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+        "decision_status": {"$ref": "common.schema.json#/$defs/business_decision_status"},
+        "export_ready": {"type": "boolean"},
+        "data_status": {"type": "string", "enum": ["complete", "incomplete"]},
+        "export_blockers": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+        "product_bundle": {
+          "oneOf": [
+            {"$ref": "#/$defs/result_product_bundle"},
+            {"type": "null"}
+          ]
+        },
+        "criterion_status": {"$ref": "common.schema.json#/$defs/criterion_status_map"},
+        "qualification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reason_codes"],
+          "properties": {
+            "reason_codes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"$ref": "common.schema.json#/$defs/decision_reason_code"}
+            }
+          }
+        },
+        "offer": {
+          "oneOf": [
+            {"$ref": "#/$defs/offer"},
+            {"type": "null"}
+          ]
+        },
+        "field_status": {"$ref": "common.schema.json#/$defs/field_status_map"},
+        "field_evidence": {"$ref": "common.schema.json#/$defs/field_evidence_map"},
+        "warnings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "interpreter_version": {"$ref": "#/$defs/interpreter_version"}
+      },
+      "if": {
+        "properties": {"decision_status": {"const": "qualified"}},
+        "required": ["decision_status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "product_bundle": {"$ref": "#/$defs/result_product_bundle"},
+          "offer": {"$ref": "#/$defs/offer"},
+          "criterion_status": {
+            "type": "object",
+            "properties": {
+              "housing": {"const": "found"},
+              "refinancing": {"const": "found"},
+              "fixed_rate": {"const": "found"}
+            }
+          }
+        }
+      }
+    },
+    "technical_error_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "run_id",
+        "entry_id",
+        "institution_id",
+        "decision_status",
+        "error_code",
+        "error_message",
+        "retryable",
+        "interpreter_version"
+      ],
+      "properties": {
+        "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+        "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+        "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+        "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+        "decision_status": {"const": "technical_error"},
+        "export_ready": {"const": false},
+        "data_status": {"const": "incomplete"},
+        "export_blockers": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "error_code": {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+        "error_message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "retryable": {"const": false},
+        "warnings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          }
+        },
+        "interpreter_version": {"$ref": "#/$defs/interpreter_version"}
+      }
+    },
+    "result_product_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "product_id",
+        "variant_id",
+        "product_name",
+        "canonical_product_url",
+        "source_artifact_ids"
+      ],
+      "properties": {
+        "product_id": {"$ref": "common.schema.json#/$defs/product_id"},
+        "variant_id": {"$ref": "common.schema.json#/$defs/variant_id"},
+        "product_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "canonical_product_url": {"$ref": "common.schema.json#/$defs/https_url"},
+        "source_artifact_ids": {
+          "allOf": [
+            {"$ref": "common.schema.json#/$defs/source_artifact_id_list"},
+            {"type": "array", "minItems": 1}
+          ]
+        }
+      }
+    },
+    "offer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixed_rate_type",
+        "comparison_context",
+        "fixed_nominal_rate_exact",
+        "fixed_nominal_rate_min",
+        "fixed_nominal_rate_max",
+        "rrso_exact",
+        "rrso_min",
+        "rrso_max",
+        "commission_exact",
+        "commission_min",
+        "commission_max",
+        "commission_unit",
+        "commission_currency",
+        "fixed_rate_period_years_exact",
+        "max_loan_term_years"
+      ],
+      "properties": {
+        "fixed_rate_type": {"$ref": "common.schema.json#/$defs/rate_type"},
+        "comparison_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "representative_amount",
+            "term_years",
+            "customer_profile",
+            "observation_date"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "representative_amount": {
+              "type": ["number", "null"],
+              "minimum": 0
+            },
+            "term_years": {
+              "type": ["integer", "null"],
+              "minimum": 1
+            },
+            "customer_profile": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$"
+            },
+            "observation_date": {"$ref": "common.schema.json#/$defs/timestamp"}
+          }
+        },
+        "fixed_nominal_rate_exact": {"$ref": "#/$defs/nullable_percent"},
+        "fixed_nominal_rate_min": {"$ref": "#/$defs/nullable_percent"},
+        "fixed_nominal_rate_max": {"$ref": "#/$defs/nullable_percent"},
+        "rrso_exact": {"$ref": "#/$defs/nullable_percent"},
+        "rrso_min": {"$ref": "#/$defs/nullable_percent"},
+        "rrso_max": {"$ref": "#/$defs/nullable_percent"},
+        "commission_exact": {"$ref": "#/$defs/nullable_amount"},
+        "commission_min": {"$ref": "#/$defs/nullable_amount"},
+        "commission_max": {"$ref": "#/$defs/nullable_amount"},
+        "commission_unit": {"enum": ["percent", "amount", null]},
+        "commission_currency": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "fixed_rate_period_years_exact": {
+          "type": ["number", "null"],
+          "exclusiveMinimum": 0,
+          "maximum": 50
+        },
+        "max_loan_term_years": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 50
+        }
+      },
+      "if": {
+        "properties": {"fixed_rate_type": {"const": "permanent_fixed"}},
+        "required": ["fixed_rate_type"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {"fixed_rate_period_years_exact": {"type": "null"}}
+      },
+      "allOf": [
+        {"$ref": "#/$defs/periodically_fixed_period"},
+        {"$ref": "#/$defs/amount_commission_currency"}
+      ]
+    },
+    "periodically_fixed_period": {
+      "if": {
+        "type": "object",
+        "properties": {"fixed_rate_type": {"const": "periodically_fixed"}},
+        "required": ["fixed_rate_type"]
+      },
+      "then": {
+        "type": "object",
+        "required": ["fixed_rate_period_years_exact"],
+        "properties": {
+          "fixed_rate_period_years_exact": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 50
+          }
+        }
+      }
+    },
+    "amount_commission_currency": {
+      "if": {
+        "type": "object",
+        "properties": {"commission_unit": {"const": "amount"}},
+        "required": ["commission_unit"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "commission_currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        }
+      }
+    },
+    "nullable_percent": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "nullable_amount": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "interpreter_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.@:_-]*$"
+    }
+  }
+}

@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/source-artifact.schema.json",
+  "title": "SourceArtifact",
+  "description": "Run-local record of one fetched material, including revalidated transport cache lineage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_id",
+    "run_id",
+    "entry_id",
+    "canonical_url",
+    "source_type",
+    "fetched_at",
+    "raw_content_sha256",
+    "raw_content_bytes",
+    "content_type",
+    "content_encoding",
+    "http_status",
+    "redirect_chain",
+    "request_response_metadata_sha256",
+    "run_local_path",
+    "robots_policy",
+    "cache_status",
+    "cache_key",
+    "cache_lineage",
+    "attempt",
+    "retry_count",
+    "error"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "artifact_id": {"$ref": "common.schema.json#/$defs/source_artifact_id"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+    "canonical_url": {"$ref": "common.schema.json#/$defs/https_url"},
+    "source_type": {"$ref": "common.schema.json#/$defs/source_type"},
+    "fetched_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "raw_content_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "raw_content_bytes": {"$ref": "common.schema.json#/$defs/byte_count"},
+    "content_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "content_encoding": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "http_status": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 599
+    },
+    "redirect_chain": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {"$ref": "common.schema.json#/$defs/https_url"}
+    },
+    "request_response_metadata_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "run_local_path": {"$ref": "common.schema.json#/$defs/path"},
+    "robots_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "robots_url", "checked_at"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["allow", "deny", "unavailable"]
+        },
+        "robots_url": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/https_url"},
+            {"type": "null"}
+          ]
+        },
+        "checked_at": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/timestamp"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "cache_status": {"$ref": "common.schema.json#/$defs/cache_status"},
+    "cache_key": {"$ref": "common.schema.json#/$defs/sha256"},
+    "cache_lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["origin", "etag", "last_modified", "vary", "revalidated_at"],
+      "properties": {
+        "origin": {
+          "type": "string",
+          "enum": ["network", "revalidated_transport_cache"]
+        },
+        "etag": {
+          "type": ["string", "null"],
+          "maxLength": 255
+        },
+        "last_modified": {
+          "type": ["string", "null"],
+          "maxLength": 64
+        },
+        "vary": {
+          "type": ["string", "null"],
+          "maxLength": 255
+        },
+        "revalidated_at": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/timestamp"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "attempt": {"$ref": "common.schema.json#/$defs/positive_integer"},
+    "retry_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "error": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            },
+            "retryable": {"type": "boolean"}
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"cache_status": {"const": "revalidated"}},
+        "required": ["cache_status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "cache_lineage": {
+            "type": "object",
+            "properties": {
+              "origin": {"const": "revalidated_transport_cache"},
+              "revalidated_at": {"$ref": "common.schema.json#/$defs/timestamp"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"cache_status": {"enum": ["miss", "refetched"]}},
+        "required": ["cache_status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "cache_lineage": {
+            "type": "object",
+            "properties": {"origin": {"const": "network"}}
+          }
+        }
+      }
+    }
+  ]
+}

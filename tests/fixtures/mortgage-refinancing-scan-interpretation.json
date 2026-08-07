@@ -1,0 +1,143 @@
+{
+  "schema_version": "1.0.0",
+  "fixture_id": "interpretation-vertical-slice-20260806",
+  "observed_at": "2026-08-06T00:00:00Z",
+  "network": false,
+  "entries": [
+    {
+      "entry_id": "bank-positive",
+      "institution_id": "positive-bank",
+      "origin": "positive.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [{"url": "https://positive.example.test/kredyt-mieszkaniowy", "required": true}],
+      "sources": [
+        {"url": "https://positive.example.test/kredyt-mieszkaniowy", "status": 200, "content_type": "text/html; charset=utf-8", "body": "<h1>Kredyt mieszkaniowy</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe przez 5 lat.</p><p>Oprocentowanie nominalne 6,30%.</p><p>RRSO 6,70%.</p><p>Prowizja 1,00%.</p><p>Maksymalny okres 35 lat.</p>", "source_type": "official_product_page"}
+      ],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Kredyt mieszkaniowy"},
+        {"field_path": "qualification.refinancing", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Oprocentowanie okresowo stałe przez 5 lat"},
+        {"field_path": "offer.fixed_nominal_rate", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Oprocentowanie nominalne 6,30%"},
+        {"field_path": "offer.rrso", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "RRSO 6,70%"},
+        {"field_path": "offer.commission", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Prowizja 1,00%"},
+        {"field_path": "offer.max_loan_term_years", "url": "https://positive.example.test/kredyt-mieszkaniowy", "product_id": "prd-111111111111111111111111", "variant_id": "var-111111111111111111111111", "excerpt": "Maksymalny okres 35 lat"}
+      ],
+      "interpretation": {
+        "products": [{
+          "product_id": "prd-111111111111111111111111",
+          "variant_id": "var-111111111111111111111111",
+          "product_name": "Kredyt mieszkaniowy",
+          "audience": "consumer_standard",
+          "rate_type": "periodically_fixed",
+          "comparison_context": {"currency": "PLN", "representative_amount": 300000, "term_years": 25, "customer_profile": "consumer_standard", "observation_date": "2026-08-06T00:00:00Z"},
+          "offer": {"fixed_rate_period_years_exact": 5, "max_loan_term_years": 35}
+        }]
+      }
+    },
+    {
+      "entry_id": "bank-own-costs",
+      "institution_id": "own-costs-bank",
+      "origin": "own-costs.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [{"url": "https://own-costs.example.test/zwrot-kosztow", "required": true}],
+      "sources": [{"url": "https://own-costs.example.test/zwrot-kosztow", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy</h1><p>Zwrot kosztów poniesionych przez klienta bez spłaty kredytu.</p><p>Oprocentowanie okresowo stałe przez 3 lata.</p>", "source_type": "official_product_page"}],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://own-costs.example.test/zwrot-kosztow", "product_id": "prd-222222222222222222222222", "variant_id": "var-222222222222222222222222", "excerpt": "Kredyt mieszkaniowy"},
+        {"field_path": "qualification.refinancing", "url": "https://own-costs.example.test/zwrot-kosztow", "product_id": "prd-222222222222222222222222", "variant_id": "var-222222222222222222222222", "excerpt": "Zwrot kosztów poniesionych przez klienta bez spłaty kredytu"},
+        {"field_path": "qualification.fixed_rate", "url": "https://own-costs.example.test/zwrot-kosztow", "product_id": "prd-222222222222222222222222", "variant_id": "var-222222222222222222222222", "excerpt": "Oprocentowanie okresowo stałe przez 3 lata"}
+      ],
+      "interpretation": {"products": [{"product_id": "prd-222222222222222222222222", "variant_id": "var-222222222222222222222222", "product_name": "Kredyt mieszkaniowy — zwrot kosztów", "rate_type": "periodically_fixed", "offer": {"fixed_rate_period_years_exact": 3}}]}
+    },
+    {
+      "entry_id": "bank-housing-only",
+      "institution_id": "housing-only-bank",
+      "origin": "housing-only.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [{"url": "https://housing-only.example.test/kredyt", "required": true}],
+      "sources": [{"url": "https://housing-only.example.test/kredyt", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy</h1><p>Oprocentowanie okresowo stałe przez 10 lat.</p>", "source_type": "official_product_page"}],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://housing-only.example.test/kredyt", "product_id": "prd-333333333333333333333333", "variant_id": "var-333333333333333333333333", "excerpt": "Kredyt mieszkaniowy"},
+        {"field_path": "qualification.fixed_rate", "url": "https://housing-only.example.test/kredyt", "product_id": "prd-333333333333333333333333", "variant_id": "var-333333333333333333333333", "excerpt": "Oprocentowanie okresowo stałe przez 10 lat"}
+      ],
+      "interpretation": {"products": [{"product_id": "prd-333333333333333333333333", "variant_id": "var-333333333333333333333333", "product_name": "Kredyt mieszkaniowy bez refinansowania", "rate_type": "periodically_fixed", "offer": {"fixed_rate_period_years_exact": 10}}]}
+    },
+    {
+      "entry_id": "bank-variable",
+      "institution_id": "variable-bank",
+      "origin": "variable.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [{"url": "https://variable.example.test/kredyt", "required": true}],
+      "sources": [{"url": "https://variable.example.test/kredyt", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie zmienne.</p>", "source_type": "official_product_page"}],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://variable.example.test/kredyt", "product_id": "prd-444444444444444444444444", "variant_id": "var-444444444444444444444444", "excerpt": "Kredyt mieszkaniowy"},
+        {"field_path": "qualification.refinancing", "url": "https://variable.example.test/kredyt", "product_id": "prd-444444444444444444444444", "variant_id": "var-444444444444444444444444", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://variable.example.test/kredyt", "product_id": "prd-444444444444444444444444", "variant_id": "var-444444444444444444444444", "excerpt": "Oprocentowanie zmienne"}
+      ],
+      "interpretation": {"products": [{"product_id": "prd-444444444444444444444444", "variant_id": "var-444444444444444444444444", "product_name": "Kredyt ze stopą zmienną", "rate_type": "periodically_fixed"}]}
+    },
+    {
+      "entry_id": "bank-split-products",
+      "institution_id": "split-products-bank",
+      "origin": "split.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [{"url": "https://split.example.test/housing", "required": true}, {"url": "https://split.example.test/refinance", "required": true}],
+      "sources": [
+        {"url": "https://split.example.test/housing", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy</h1><p>Oprocentowanie stałe przez cały okres kredytowania.</p>", "source_type": "official_product_page"},
+        {"url": "https://split.example.test/refinance", "status": 200, "content_type": "text/html", "body": "<h1>Pożyczka na spłatę</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe przez 5 lat.</p>", "source_type": "official_product_page"}
+      ],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://split.example.test/housing", "product_id": "prd-555555555555555555555555", "variant_id": "var-555555555555555555555555", "excerpt": "Kredyt mieszkaniowy"},
+        {"field_path": "qualification.fixed_rate", "url": "https://split.example.test/housing", "product_id": "prd-555555555555555555555555", "variant_id": "var-555555555555555555555555", "excerpt": "Oprocentowanie stałe przez cały okres kredytowania"},
+        {"field_path": "qualification.refinancing", "url": "https://split.example.test/refinance", "product_id": "prd-666666666666666666666666", "variant_id": "var-666666666666666666666666", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://split.example.test/refinance", "product_id": "prd-666666666666666666666666", "variant_id": "var-666666666666666666666666", "excerpt": "Oprocentowanie okresowo stałe przez 5 lat"}
+      ],
+      "interpretation": {"products": [
+        {"product_id": "prd-555555555555555555555555", "variant_id": "var-555555555555555555555555", "product_name": "Kredyt mieszkaniowy", "rate_type": "permanent_fixed"},
+        {"product_id": "prd-666666666666666666666666", "variant_id": "var-666666666666666666666666", "product_name": "Pożyczka na spłatę", "rate_type": "periodically_fixed", "offer": {"fixed_rate_period_years_exact": 5}}
+      ]}
+    },
+    {
+      "entry_id": "bank-html-pdf",
+      "institution_id": "html-pdf-bank",
+      "origin": "docs.example.test",
+      "robots": {"status": "allow"},
+      "sitemap": [
+        {"url": "https://docs.example.test/offer-a", "required": true},
+        {"url": "https://docs.example.test/offer-b", "required": true},
+        {"url": "https://docs.example.test/offer-permanent", "required": true}
+      ],
+      "sources": [
+        {"url": "https://docs.example.test/offer-a", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy standard</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe przez 5 lat.</p><p>Oprocentowanie nominalne 7,00%.</p><p>RRSO 7,50%.</p><p>Prowizja 1,00%.</p>", "source_type": "official_product_page"},
+        {"url": "https://docs.example.test/offer-b", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy promocyjny</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe przez 5 lat.</p><p>Oprocentowanie nominalne 6,50%.</p><p>RRSO 6,90%.</p><p>Prowizja 0,50%.</p>", "source_type": "official_product_page"},
+        {"url": "https://docs.example.test/offer-permanent", "status": 200, "content_type": "text/html", "body": "<h1>Kredyt mieszkaniowy bezterminowy</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie stałe przez cały okres kredytowania.</p><p>Oprocentowanie nominalne 6,80%.</p><p>RRSO 7,10%.</p><p>Prowizja 0,50%.</p>", "source_type": "official_product_page"}
+      ],
+      "evidence": [
+        {"field_path": "qualification.housing", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "Kredyt mieszkaniowy standard"},
+        {"field_path": "qualification.refinancing", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "Oprocentowanie okresowo stałe przez 5 lat"},
+        {"field_path": "offer.fixed_nominal_rate", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "Oprocentowanie nominalne 7,00%"},
+        {"field_path": "offer.rrso", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "RRSO 7,50%"},
+        {"field_path": "offer.commission", "url": "https://docs.example.test/offer-a", "product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "excerpt": "Prowizja 1,00%"},
+        {"field_path": "qualification.housing", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "Kredyt mieszkaniowy promocyjny"},
+        {"field_path": "qualification.refinancing", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "Oprocentowanie okresowo stałe przez 5 lat"},
+        {"field_path": "offer.fixed_nominal_rate", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "Oprocentowanie nominalne 6,50%"},
+        {"field_path": "offer.rrso", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "RRSO 6,90%"},
+        {"field_path": "offer.commission", "url": "https://docs.example.test/offer-b", "product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "excerpt": "Prowizja 0,50%"},
+        {"field_path": "qualification.housing", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "Kredyt mieszkaniowy bezterminowy"},
+        {"field_path": "qualification.refinancing", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path": "qualification.fixed_rate", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "Oprocentowanie stałe przez cały okres kredytowania"},
+        {"field_path": "offer.fixed_nominal_rate", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "Oprocentowanie nominalne 6,80%"},
+        {"field_path": "offer.rrso", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "RRSO 7,10%"},
+        {"field_path": "offer.commission", "url": "https://docs.example.test/offer-permanent", "product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "excerpt": "Prowizja 0,50%"}
+      ],
+      "interpretation": {
+        "products": [
+          {"product_id": "prd-777777777777777777777777", "variant_id": "var-777777777777777777777777", "product_name": "Kredyt standard", "rate_type": "periodically_fixed", "comparison_context": {"currency": "PLN", "representative_amount": 300000, "term_years": 25, "customer_profile": "consumer_standard", "observation_date": "2026-08-06T00:00:00Z"}, "offer": {"fixed_rate_period_years_exact": 5}},
+          {"product_id": "prd-888888888888888888888888", "variant_id": "var-888888888888888888888888", "product_name": "Kredyt promocyjny", "rate_type": "periodically_fixed", "promotion": true, "comparison_context": {"currency": "PLN", "representative_amount": 300000, "term_years": 25, "customer_profile": "consumer_standard", "observation_date": "2026-08-06T00:00:00Z"}, "offer": {"fixed_rate_period_years_exact": 5}},
+          {"product_id": "prd-999999999999999999999999", "variant_id": "var-999999999999999999999999", "product_name": "Kredyt bezterminowy", "rate_type": "permanent_fixed", "comparison_context": {"currency": "PLN", "representative_amount": 300000, "term_years": 25, "customer_profile": "consumer_standard", "observation_date": "2026-08-06T00:00:00Z"}}
+        ]
+      }
+    }
+  ]
+}

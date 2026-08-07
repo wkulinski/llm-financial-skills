@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0.0",
+  "fixture_id": "research-vertical-slice-20260806",
+  "observed_at": "2026-08-06T00:00:00Z",
+  "network": false,
+  "entries": [
+    {
+      "entry_id": "bank-positive",
+      "institution_id": "positive-bank",
+      "origin": "positive.example.test",
+      "robots": {"status":"allow","robots_url":"https://positive.example.test/robots.txt","checked_at":"2026-08-06T00:00:00Z"},
+      "sitemap": [{"url":"https://positive.example.test/kredyt-mieszkaniowy","required":true}],
+      "candidates": [{"url":"https://positive.example.test/kredyt-mieszkaniowy","required":false},{"url":"https://positive.example.test/taryfa.pdf","source_type":"official_pdf","required":false},{"url":"https://positive.example.test/js-shell","javascript_required":true,"required":false}],
+      "sources": [
+        {"url":"https://positive.example.test/kredyt-mieszkaniowy","status":200,"content_type":"text/html; charset=utf-8","headers":{"ETag":"\"positive-v1\""},"body":"<h1>Kredyt mieszkaniowy</h1><p>Spłatę kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe przez 5 lat.</p>","source_type":"official_product_page"},
+        {"url":"https://positive.example.test/taryfa.pdf","status":200,"content_type":"text/plain; charset=utf-8","headers":{"ETag":"\"positive-pdf-v1\""},"body":"%PDF-1.7\nRRSO 6,70%\nProwizja 1,00%\n","source_type":"official_pdf"}
+      ],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://positive.example.test/kredyt-mieszkaniowy","product_id":"prd-111111111111111111111111","variant_id":"var-111111111111111111111111","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.refinancing","url":"https://positive.example.test/kredyt-mieszkaniowy","product_id":"prd-111111111111111111111111","variant_id":"var-111111111111111111111111","excerpt":"Spłatę kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path":"qualification.fixed_rate","url":"https://positive.example.test/kredyt-mieszkaniowy","product_id":"prd-111111111111111111111111","variant_id":"var-111111111111111111111111","excerpt":"Oprocentowanie okresowo stałe"}
+      ]
+    },
+    {
+      "entry_id": "bank-own-costs",
+      "institution_id": "own-costs-bank",
+      "origin": "own-costs.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://own-costs.example.test/zwrot-kosztow","required":true}],
+      "sources": [{"url":"https://own-costs.example.test/zwrot-kosztow","status":200,"content_type":"text/html","body":"<h1>Kredyt mieszkaniowy</h1><p>Zwrot kosztów poniesionych przez klienta. Oprocentowanie okresowo stałe.</p>","source_type":"official_product_page"}],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://own-costs.example.test/zwrot-kosztow","product_id":"prd-222222222222222222222222","variant_id":"var-222222222222222222222222","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.fixed_rate","url":"https://own-costs.example.test/zwrot-kosztow","product_id":"prd-222222222222222222222222","variant_id":"var-222222222222222222222222","excerpt":"Oprocentowanie okresowo stałe"}
+      ]
+    },
+    {
+      "entry_id": "bank-housing-only",
+      "institution_id": "housing-only-bank",
+      "origin": "housing-only.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://housing-only.example.test/kredyt","required":true}],
+      "sources": [{"url":"https://housing-only.example.test/kredyt","status":200,"content_type":"text/html","body":"<h1>Kredyt mieszkaniowy</h1><p>Oprocentowanie okresowo stałe przez 10 lat.</p>","source_type":"official_product_page"}],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://housing-only.example.test/kredyt","product_id":"prd-333333333333333333333333","variant_id":"var-333333333333333333333333","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.fixed_rate","url":"https://housing-only.example.test/kredyt","product_id":"prd-333333333333333333333333","variant_id":"var-333333333333333333333333","excerpt":"Oprocentowanie okresowo stałe"}
+      ]
+    },
+    {
+      "entry_id": "bank-variable",
+      "institution_id": "variable-bank",
+      "origin": "variable.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://variable.example.test/kredyt","required":true}],
+      "sources": [{"url":"https://variable.example.test/kredyt","status":200,"content_type":"text/html","body":"<h1>Kredyt mieszkaniowy</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku. Oprocentowanie zmienne.</p>","source_type":"official_product_page"}],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://variable.example.test/kredyt","product_id":"prd-444444444444444444444444","variant_id":"var-444444444444444444444444","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.refinancing","url":"https://variable.example.test/kredyt","product_id":"prd-444444444444444444444444","variant_id":"var-444444444444444444444444","excerpt":"Spłata kredytu mieszkaniowego zaciągniętego w innym banku"}
+      ]
+    },
+    {
+      "entry_id": "bank-split-products",
+      "institution_id": "split-products-bank",
+      "origin": "split.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [
+        {"url":"https://split.example.test/housing","required":true},
+        {"url":"https://split.example.test/refinance","required":true}
+      ],
+      "sources": [
+        {"url":"https://split.example.test/housing","status":200,"content_type":"text/html","body":"<h1>Kredyt mieszkaniowy</h1><p>Oprocentowanie zmienne.</p>","source_type":"official_product_page"},
+        {"url":"https://split.example.test/refinance","status":200,"content_type":"text/html","body":"<h1>Pożyczka na spłatę</h1><p>Spłata kredytu mieszkaniowego zaciągniętego w innym banku. Oprocentowanie okresowo stałe.</p>","source_type":"official_product_page"}
+      ],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://split.example.test/housing","product_id":"prd-555555555555555555555555","variant_id":"var-555555555555555555555555","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.refinancing","url":"https://split.example.test/refinance","product_id":"prd-666666666666666666666666","variant_id":"var-666666666666666666666666","excerpt":"Spłata kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path":"qualification.fixed_rate","url":"https://split.example.test/refinance","product_id":"prd-666666666666666666666666","variant_id":"var-666666666666666666666666","excerpt":"Oprocentowanie okresowo stałe"}
+      ]
+    },
+    {
+      "entry_id": "bank-html-pdf",
+      "institution_id": "html-pdf-bank",
+      "origin": "docs.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://docs.example.test/kredyt-mieszkaniowy","required":true}],
+      "candidates": [{"url":"https://docs.example.test/cennik.pdf","source_type":"official_pdf","required":false}],
+      "sources": [
+        {"url":"https://docs.example.test/kredyt-mieszkaniowy","status":200,"content_type":"text/html; charset=utf-8","body":"<h1>Kredyt mieszkaniowy — oferta konsumencka</h1><p>Spłatę kredytu mieszkaniowego zaciągniętego w innym banku.</p><p>Oprocentowanie okresowo stałe.</p>","source_type":"official_product_page"},
+        {"url":"https://docs.example.test/cennik.pdf","status":200,"content_type":"text/plain; charset=utf-8","body":"%PDF-1.7\nRRSO 6,55%\nProwizja 0,50%\n","source_type":"official_pdf"}
+      ],
+      "evidence": [
+        {"field_path":"qualification.housing","url":"https://docs.example.test/kredyt-mieszkaniowy","product_id":"prd-777777777777777777777777","variant_id":"var-777777777777777777777777","excerpt":"Kredyt mieszkaniowy"},
+        {"field_path":"qualification.refinancing","url":"https://docs.example.test/kredyt-mieszkaniowy","product_id":"prd-777777777777777777777777","variant_id":"var-777777777777777777777777","excerpt":"Spłatę kredytu mieszkaniowego zaciągniętego w innym banku"},
+        {"field_path":"qualification.fixed_rate","url":"https://docs.example.test/kredyt-mieszkaniowy","product_id":"prd-777777777777777777777777","variant_id":"var-777777777777777777777777","excerpt":"Oprocentowanie okresowo stałe"}
+      ]
+    },
+    {
+      "entry_id": "bank-robots",
+      "institution_id": "robots-bank",
+      "origin": "robots.example.test",
+      "robots": {"status":"deny","robots_url":"https://robots.example.test/robots.txt","checked_at":"2026-08-06T00:00:00Z"},
+      "sitemap": [{"url":"https://robots.example.test/kredyt","required":true}],
+      "sources": []
+    },
+    {
+      "entry_id": "bank-redirect",
+      "institution_id": "redirect-bank",
+      "origin": "redirect.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://redirect.example.test/kredyt","redirect_chain":["https://evil.example.test/kredyt"],"required":true}],
+      "sources": [{"url":"https://redirect.example.test/kredyt","status":200,"content_type":"text/html","body":"Kredyt mieszkaniowy","source_type":"official_product_page"}],
+      "evidence": []
+    },
+    {
+      "entry_id": "bank-errors",
+      "institution_id": "errors-bank",
+      "origin": "errors.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [
+        {"url":"https://errors.example.test/retry-429","required":true},
+        {"url":"https://errors.example.test/not-found","required":false},
+        {"url":"https://errors.example.test/unauthorized","required":true},
+        {"url":"https://errors.example.test/forbidden","required":true},
+        {"url":"https://errors.example.test/server-error","required":true},
+        {"url":"https://errors.example.test/timeout","required":true}
+      ],
+      "sources": [
+        {"url":"https://errors.example.test/retry-429","responses":[{"status":429,"headers":{"Retry-After":"1"}},{"status":200,"content_type":"text/html","body":"Retry succeeded","source_type":"official_product_page"}]},
+        {"url":"https://errors.example.test/not-found","status":404,"content_type":"text/html","body":"missing","source_type":"official_product_page"},
+        {"url":"https://errors.example.test/unauthorized","status":401,"content_type":"text/html","body":"unauthorized","source_type":"official_product_page"},
+        {"url":"https://errors.example.test/forbidden","status":403,"content_type":"text/html","body":"denied","source_type":"official_product_page"},
+        {"url":"https://errors.example.test/server-error","responses":[{"status":500},{"status":500}]},
+        {"url":"https://errors.example.test/timeout","responses":[{"timeout":true},{"timeout":true}]}
+      ],
+      "evidence": []
+    },
+    {
+      "entry_id": "bank-shared-origin-one",
+      "institution_id": "shared-origin-one",
+      "origin": "shared.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://shared.example.test/one","required":true}],
+      "sources": [{"url":"https://shared.example.test/one","status":200,"content_type":"text/html","body":"Shared origin one","source_type":"official_product_page"}],
+      "evidence": []
+    },
+    {
+      "entry_id": "bank-shared-origin-two",
+      "institution_id": "shared-origin-two",
+      "origin": "shared.example.test",
+      "robots": {"status":"allow"},
+      "sitemap": [{"url":"https://shared.example.test/two","required":true}],
+      "sources": [{"url":"https://shared.example.test/two","status":200,"content_type":"text/html","body":"Shared origin two","source_type":"official_product_page"}],
+      "evidence": []
+    }
+  ]
+}

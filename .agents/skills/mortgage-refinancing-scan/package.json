@@ -1,0 +1,18 @@
+{
+    "name": "mortgage-refinancing-scan",
+    "version": "1.0.0",
+    "description": "Standalone mortgage refinancing scan skill: strict contracts, deterministic lifecycle, research and interpretation vertical slices.",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "check": "node --check lib/canonical-json.mjs && node --check lib/schema-registry.mjs && node --check lib/run-contract-validate.mjs && node --check lib/origin-scheduler.mjs && node --check lib/run-lifecycle.mjs && node --check lib/research-runtime.mjs && node --check lib/live-research.mjs && node --check lib/resource-benchmark.mjs && node --check lib/pipeline.mjs && node --check lib/full-report.mjs && node --check lib/publication-audit.mjs && node --check lib/export-workbook.mjs && node --check lib/xlsx.mjs && node --check lib/institution-list.mjs && node --check lib/source-discovery.mjs && node --check lib/source-fetch.mjs && node --check lib/normalization.mjs && node --check lib/evidence.mjs && node --check lib/review-context.mjs && node --check lib/offer-select.mjs && node --check lib/interpretation-validate.mjs && node --check lib/interpretation.mjs && node --check tools/run-init.mjs && node --check tools/run-state.mjs && node --check tools/runner.mjs && node --check tools/resource-benchmark.mjs && node --check tools/run-audit.mjs && node --check tools/export-workbook.mjs && node --check tools/finalize.mjs && node --check tools/abort.mjs && node --check tools/institution-list.mjs && node --check tools/source-discovery.mjs && node --check tools/source-fetch.mjs && node --check tools/normalize.mjs && node --check tools/evidence.mjs && node --check tools/interpret.mjs && python3 -m py_compile tools/morfeusz2-worker.py && node -e \"import('./lib/schema-registry.mjs').then((m) => m.compileAllContracts()).then((names) => console.log('contracts:', names.length))\""
+    },
+    "dependencies": {
+        "ajv": "^8.17.1",
+        "ajv-formats": "^3.0.1",
+        "pdf-parse": "^1.1.1"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

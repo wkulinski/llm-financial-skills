@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/entry-state.schema.json",
+  "title": "RunEntryState",
+  "description": "Atomic projection of one exact-scope entry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "entry_id",
+    "lp",
+    "institution_id",
+    "stage",
+    "attempt",
+    "started_at",
+    "finished_at",
+    "elapsed_ms",
+    "input_artifact_ids",
+    "output_artifact_ids",
+    "decision_status",
+    "error_code",
+    "error_message",
+    "retryable"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+    "lp": {"$ref": "common.schema.json#/$defs/lp"},
+    "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+    "stage": {"$ref": "common.schema.json#/$defs/entry_stage"},
+    "attempt": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "started_at": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/timestamp"},
+        {"type": "null"}
+      ]
+    },
+    "finished_at": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/timestamp"},
+        {"type": "null"}
+      ]
+    },
+    "elapsed_ms": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/duration_ms"},
+        {"type": "null"}
+      ]
+    },
+    "input_artifact_ids": {"$ref": "common.schema.json#/$defs/artifact_id_list"},
+    "output_artifact_ids": {"$ref": "common.schema.json#/$defs/artifact_id_list"},
+    "decision_status": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/business_decision_status"},
+        {"type": "null"}
+      ]
+    },
+    "entry_outcome": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/entry_outcome"},
+        {"type": "null"}
+      ]
+    },
+    "error_code": {
+      "oneOf": [
+        {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+        {"type": "null"}
+      ]
+    },
+    "error_message": {
+      "oneOf": [
+        {"type": "string", "minLength": 1, "maxLength": 2048},
+        {"type": "null"}
+      ]
+    },
+    "retryable": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"stage": {"const": "technical_error"}}, "required": ["stage"]},
+      "then": {
+        "properties": {
+          "decision_status": {"const": null},
+          "entry_outcome": {"enum": ["external_source_error", "internal_error"]},
+          "error_code": {"type": "string"},
+          "error_message": {"type": "string"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"stage": {"const": "interpreted"}}, "required": ["stage"]},
+      "then": {
+        "properties": {
+          "decision_status": {"enum": ["qualified", "explicitly_not_qualified", "unconfirmed"]},
+          "finished_at": {"type": "string"}
+        }
+      }
+    }
+  ]
+}

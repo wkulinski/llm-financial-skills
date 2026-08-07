@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "phase5-controlled-fixture-20260806",
+  "source_kind": "fixture",
+  "observed_at": "2026-08-06T00:00:00Z",
+  "entries": [
+    {"entry_id":"bank-positive","lp":1,"institution_id":"positive-bank","institution_type":"cooperative_bank","legal_name":"Positive Bank Spółdzielczy","official_hosts":["positive.example.test"],"allowed_redirect_hosts":["positive.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-own-costs","lp":2,"institution_id":"own-costs-bank","institution_type":"cooperative_bank","legal_name":"Own Costs Bank Spółdzielczy","official_hosts":["own-costs.example.test"],"allowed_redirect_hosts":["own-costs.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-housing-only","lp":3,"institution_id":"housing-only-bank","institution_type":"cooperative_bank","legal_name":"Housing Only Bank Spółdzielczy","official_hosts":["housing-only.example.test"],"allowed_redirect_hosts":["housing-only.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-variable","lp":4,"institution_id":"variable-bank","institution_type":"cooperative_bank","legal_name":"Variable Bank Spółdzielczy","official_hosts":["variable.example.test"],"allowed_redirect_hosts":["variable.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-split-products","lp":5,"institution_id":"split-products-bank","institution_type":"cooperative_bank","legal_name":"Split Products Bank Spółdzielczy","official_hosts":["split.example.test"],"allowed_redirect_hosts":["split.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-html-pdf","lp":6,"institution_id":"html-pdf-bank","institution_type":"cooperative_bank","legal_name":"HTML PDF Bank Spółdzielczy","official_hosts":["docs.example.test"],"allowed_redirect_hosts":["docs.example.test"],"registry_sources":["fixture"],"observed_at":"2026-08-06T00:00:00Z"}
+  ]
+}

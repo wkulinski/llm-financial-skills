@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/run-manifest.schema.json",
+  "title": "RunManifest",
+  "description": "Immutable single source of the run scope, resource policy and input fingerprint.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "scope",
+    "source_registry_sha256",
+    "mode",
+    "live",
+    "discovery_policy",
+    "resource_policy",
+    "transport_cache_policy",
+    "methodology_version",
+    "created_at",
+    "input_fingerprint",
+    "environment_fingerprint"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entries", "scope_sha256"],
+      "properties": {
+        "entries": {"$ref": "common.schema.json#/$defs/scope_entries"},
+        "scope_sha256": {"$ref": "common.schema.json#/$defs/sha256"}
+      }
+    },
+    "source_registry_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "mode": {"const": "full"},
+    "live": {"type": "boolean"},
+    "discovery_policy": {"const": "deterministic_official_sources"},
+    "resource_policy": {
+      "$comment": "Approved start profile from the plan; changing a value requires a plan and schema update.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_active_institutions",
+        "max_http_in_flight",
+        "max_in_flight_per_origin",
+        "max_in_flight_per_institution",
+        "max_normalization_workers",
+        "max_event_batch_size",
+        "max_discovery_requests_per_institution",
+        "max_source_bytes_per_institution",
+        "max_artifact_html_bytes",
+        "max_artifact_pdf_bytes",
+        "max_redirects",
+        "max_attempts",
+        "html_timeout_ms",
+        "pdf_timeout_ms",
+        "robots_timeout_ms",
+        "institution_deadline_ms",
+        "run_deadline_ms",
+        "retry_after_cap_ms",
+        "origin_delay_ms"
+      ],
+      "properties": {
+        "max_active_institutions": {"const": 24},
+        "max_http_in_flight": {"const": 24},
+        "max_in_flight_per_origin": {"const": 1},
+        "max_in_flight_per_institution": {"const": 1},
+        "max_normalization_workers": {"const": 4},
+        "max_event_batch_size": {"const": 64},
+        "max_discovery_requests_per_institution": {"const": 256},
+        "max_source_bytes_per_institution": {"const": 134217728},
+        "max_artifact_html_bytes": {"const": 8388608},
+        "max_artifact_pdf_bytes": {"const": 33554432},
+        "max_redirects": {"const": 5},
+        "max_attempts": {"const": 2},
+        "html_timeout_ms": {"const": 15000},
+        "pdf_timeout_ms": {"const": 30000},
+        "robots_timeout_ms": {"const": 10000},
+        "institution_deadline_ms": {"const": 120000},
+        "run_deadline_ms": {"const": 86400000},
+        "retry_after_cap_ms": {"const": 60000},
+        "origin_delay_ms": {"const": 500}
+      }
+    },
+    "transport_cache_policy": {"$ref": "common.schema.json#/$defs/transport_cache_policy"},
+    "methodology_version": {
+      "type": "string",
+      "pattern": "^mortgage-refinancing-scan@[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "created_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "input_fingerprint": {"$ref": "common.schema.json#/$defs/sha256"},
+    "environment_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_version",
+        "package_lock_sha256",
+        "morfeusz_version",
+        "locale",
+        "timezone"
+      ],
+      "properties": {
+        "node_version": {
+          "type": "string",
+          "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "package_lock_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+        "morfeusz_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "locale": {"const": "C.UTF-8"},
+        "timezone": {"const": "UTC"}
+      }
+    }
+  }
+}

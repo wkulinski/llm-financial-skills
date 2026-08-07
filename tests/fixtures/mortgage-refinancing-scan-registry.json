@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "snapshot_id": "fixture-registry-20260806",
+  "source_kind": "fixture",
+  "observed_at": "2026-08-06T00:00:00Z",
+  "entries": [
+    {
+      "entry_id": "bank-001",
+      "lp": 1,
+      "institution_id": "example-bank",
+      "institution_type": "cooperative_bank",
+      "legal_name": "Example Bank Spółdzielczy",
+      "official_hosts": ["example.test"],
+      "allowed_redirect_hosts": ["example.test", "cdn.example.test"],
+      "registry_sources": ["fixture"],
+      "observed_at": "2026-08-06T00:00:00Z"
+    },
+    {
+      "entry_id": "bank-002",
+      "lp": 2,
+      "institution_id": "example-bank-two",
+      "institution_type": "cooperative_bank",
+      "legal_name": "Example Bank Two Spółdzielczy",
+      "official_hosts": ["example.test"],
+      "allowed_redirect_hosts": ["example.test"],
+      "registry_sources": ["fixture"],
+      "observed_at": "2026-08-06T00:00:00Z"
+    },
+    {
+      "entry_id": "bank-003",
+      "lp": 3,
+      "institution_id": "other-bank",
+      "institution_type": "cooperative_bank",
+      "legal_name": "Other Bank Spółdzielczy",
+      "official_hosts": ["other.example.test"],
+      "allowed_redirect_hosts": ["other.example.test"],
+      "registry_sources": ["fixture"],
+      "observed_at": "2026-08-06T00:00:00Z"
+    }
+  ]
+}

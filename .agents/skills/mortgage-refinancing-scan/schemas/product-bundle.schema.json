@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/product-bundle.schema.json",
+  "title": "ProductBundle",
+  "description": "Evidence grouped for exactly one institution, product and variant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "institution_id",
+    "product_id",
+    "variant_id",
+    "product_name",
+    "canonical_product_url",
+    "audience",
+    "source_artifact_ids",
+    "rate_type",
+    "criterion_status",
+    "field_evidence"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+    "product_id": {"$ref": "common.schema.json#/$defs/product_id"},
+    "variant_id": {"$ref": "common.schema.json#/$defs/variant_id"},
+    "product_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "canonical_product_url": {"$ref": "common.schema.json#/$defs/https_url"},
+    "audience": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$"
+    },
+    "source_artifact_ids": {
+      "allOf": [
+        {"$ref": "common.schema.json#/$defs/source_artifact_id_list"},
+        {"type": "array", "minItems": 1}
+      ]
+    },
+    "rate_type": {"$ref": "common.schema.json#/$defs/rate_type"},
+    "criterion_status": {"$ref": "common.schema.json#/$defs/criterion_status_map"},
+    "field_evidence": {"$ref": "common.schema.json#/$defs/field_evidence_map"}
+  }
+}

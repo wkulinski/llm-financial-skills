@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/run-checkpoint.schema.json",
+  "title": "RunCheckpoint",
+  "description": "Single source of the finalization summary, projected from entry state and the manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "scope_count",
+    "discovered_count",
+    "interpreted_count",
+    "terminal_entry_count",
+    "qualified_count",
+    "unconfirmed_count",
+    "technical_error_count",
+    "fatal_error_count",
+    "status",
+    "coverage_status"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "scope_count": {"$ref": "common.schema.json#/$defs/positive_integer"},
+    "discovered_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "interpreted_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "terminal_entry_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "qualified_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "unconfirmed_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "external_source_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "internal_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "technical_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "fatal_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+    "status": {"$ref": "common.schema.json#/$defs/checkpoint_status"},
+    "coverage_status": {"$ref": "common.schema.json#/$defs/coverage_status"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "ready"}},
+        "required": ["status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "technical_error_count": {"const": 0},
+          "external_source_error_count": {"const": 0},
+          "internal_error_count": {"const": 0},
+          "coverage_status": {"const": "complete"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "ready_with_errors"}},
+        "required": ["status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "external_source_error_count": {"type": "integer", "minimum": 0},
+          "internal_error_count": {"type": "integer", "minimum": 0},
+          "coverage_status": {"const": "degraded"}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/run-event.schema.json",
+  "title": "RunEvent",
+  "description": "Append-only run event written by the central event writer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "run_id",
+    "sequence",
+    "operation_id",
+    "occurred_at",
+    "previous_state",
+    "next_state",
+    "stage",
+    "attempt",
+    "input_artifact_ids",
+    "output_artifact_ids",
+    "validation_result"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "event_id": {"$ref": "common.schema.json#/$defs/opaque_id"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "sequence": {"$ref": "common.schema.json#/$defs/positive_integer"},
+    "operation_id": {"$ref": "common.schema.json#/$defs/opaque_id"},
+    "occurred_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "previous_state": {"$ref": "common.schema.json#/$defs/run_state"},
+    "next_state": {"$ref": "common.schema.json#/$defs/run_state"},
+    "stage": {"$ref": "common.schema.json#/$defs/entry_stage"},
+    "attempt": {"$ref": "common.schema.json#/$defs/positive_integer"},
+    "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+    "input_artifact_ids": {"$ref": "common.schema.json#/$defs/artifact_id_list"},
+    "output_artifact_ids": {"$ref": "common.schema.json#/$defs/artifact_id_list"},
+    "validation_result": {"$ref": "common.schema.json#/$defs/validation_result"},
+    "entry_state": {
+      "type": "object",
+      "additionalProperties": false,
+       "required": ["decision_status", "error_code", "error_message", "retryable"],
+      "properties": {
+        "decision_status": {
+          "oneOf": [
+             {"$ref": "common.schema.json#/$defs/business_decision_status"},
+             {"type": "null"}
+           ]
+         },
+         "entry_outcome": {
+           "oneOf": [
+             {"$ref": "common.schema.json#/$defs/entry_outcome"},
+             {"type": "null"}
+           ]
+         },
+        "error_code": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+            {"type": "null"}
+          ]
+        },
+        "error_message": {
+          "oneOf": [
+            {"type": "string", "minLength": 1, "maxLength": 2048},
+            {"type": "null"}
+          ]
+        },
+        "retryable": {"type": "boolean"},
+        "started_at": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/timestamp"},
+            {"type": "null"}
+          ]
+        },
+        "finished_at": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/timestamp"},
+            {"type": "null"}
+          ]
+        },
+        "elapsed_ms": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/duration_ms"},
+            {"type": "null"}
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"entry_state": {}}, "required": ["entry_state"]},
+      "then": {"properties": {"entry_id": {}}, "required": ["entry_id"]}
+    }
+  ]
+}

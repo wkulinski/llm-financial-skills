@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/telemetry.schema.json",
+  "title": "RunTelemetry",
+  "description": "Run, stage and entry telemetry required by the resource policy and SLO reporting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "generated_at", "run", "stages", "entries"],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "generated_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wall_clock_ms",
+        "entry_duration_ms_p50",
+        "entry_duration_ms_p95",
+        "requests",
+        "cache",
+        "bytes",
+        "resources",
+        "event_writer",
+        "errors"
+      ],
+      "properties": {
+        "wall_clock_ms": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "entry_duration_ms_p50": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "entry_duration_ms_p95": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "requests": {"$ref": "#/$defs/request_metrics"},
+        "cache": {"$ref": "#/$defs/cache_metrics"},
+        "bytes": {"$ref": "#/$defs/byte_metrics"},
+        "resources": {"$ref": "#/$defs/resource_metrics"},
+        "event_writer": {"$ref": "#/$defs/event_writer_metrics"},
+        "errors": {"$ref": "#/$defs/error_counters"}
+      }
+    },
+    "stages": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/stage_telemetry"}
+    },
+    "entries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/entry_telemetry"}
+    }
+  },
+  "$defs": {
+    "request_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "retried", "timeouts", "http_429", "http_5xx", "robots"],
+      "properties": {
+        "total": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "retried": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "timeouts": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "http_429": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "http_5xx": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "robots": {"$ref": "common.schema.json#/$defs/non_negative_integer"}
+      }
+    },
+    "cache_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["misses", "revalidated_not_modified", "refetched", "hit_rate"],
+      "properties": {
+        "misses": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "revalidated_not_modified": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "refetched": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "hit_rate": {"$ref": "common.schema.json#/$defs/ratio"}
+      }
+    },
+    "byte_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["downloaded", "reused_from_cache"],
+      "properties": {
+        "downloaded": {"$ref": "common.schema.json#/$defs/byte_count"},
+        "reused_from_cache": {"$ref": "common.schema.json#/$defs/byte_count"}
+      }
+    },
+    "resource_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cpu_user_ms", "cpu_system_ms", "max_rss_bytes"],
+      "properties": {
+        "cpu_user_ms": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "cpu_system_ms": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "max_rss_bytes": {"$ref": "common.schema.json#/$defs/byte_count"}
+      }
+    },
+    "event_writer_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events_written", "batches_written", "max_batch_size", "max_lag_ms"],
+      "properties": {
+        "events_written": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "batches_written": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "max_batch_size": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "max_lag_ms": {"$ref": "common.schema.json#/$defs/duration_ms"}
+      }
+    },
+    "error_counters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["retryable_error_count", "entry_technical_error_count", "fatal_error_count"],
+      "properties": {
+        "retryable_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "entry_technical_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "entry_external_source_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "entry_internal_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "fatal_error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"}
+      }
+    },
+    "stage_telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "entry_count", "wall_clock_ms", "requests", "bytes", "error_count"],
+      "properties": {
+        "stage": {"$ref": "common.schema.json#/$defs/entry_stage"},
+        "entry_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"},
+        "wall_clock_ms": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "requests": {"$ref": "#/$defs/request_metrics"},
+        "bytes": {"$ref": "#/$defs/byte_metrics"},
+        "error_count": {"$ref": "common.schema.json#/$defs/non_negative_integer"}
+      }
+    },
+    "entry_telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_id",
+        "institution_id",
+        "final_stage",
+        "attempts",
+        "wall_clock_ms",
+        "requests",
+        "cache",
+        "bytes",
+        "error_code"
+      ],
+      "properties": {
+        "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+        "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+        "final_stage": {"$ref": "common.schema.json#/$defs/entry_stage"},
+        "attempts": {"$ref": "common.schema.json#/$defs/positive_integer"},
+        "wall_clock_ms": {"$ref": "common.schema.json#/$defs/duration_ms"},
+        "requests": {"$ref": "#/$defs/request_metrics"},
+        "cache": {"$ref": "#/$defs/cache_metrics"},
+        "bytes": {"$ref": "#/$defs/byte_metrics"},
+        "error_code": {
+          "oneOf": [
+            {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+            {"type": "null"}
+          ]
+        }
+      }
+    }
+  }
+}

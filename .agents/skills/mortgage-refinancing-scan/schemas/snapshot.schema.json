@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/snapshot.schema.json",
+  "title": "PublishedSnapshot",
+  "description": "Complete immutable result projection emitted by core finalize.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "run_id", "scope_sha256", "coverage_status", "entries"],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "scope_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "coverage_status": {"$ref": "common.schema.json#/$defs/coverage_status"},
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["entry_id", "lp", "institution_id", "institution_type", "decision_status", "error_code", "error_message"],
+        "properties": {
+          "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+          "lp": {"$ref": "common.schema.json#/$defs/lp"},
+          "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+          "institution_type": {"$ref": "common.schema.json#/$defs/institution_type"},
+          "decision_status": {
+            "oneOf": [
+              {"$ref": "common.schema.json#/$defs/business_decision_status"},
+              {"type": "null"}
+            ]
+          },
+          "entry_outcome": {"$ref": "common.schema.json#/$defs/entry_outcome"},
+          "export_ready": {"type": "boolean"},
+          "data_status": {"type": "string", "enum": ["complete", "incomplete"]},
+          "export_blockers": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+          "error_code": {
+            "oneOf": [
+              {"$ref": "common.schema.json#/$defs/entry_run_error_code"},
+              {"type": "null"}
+            ]
+          },
+          "error_message": {
+            "oneOf": [
+              {"type": "string", "minLength": 1, "maxLength": 2048},
+              {"type": "null"}
+            ]
+          },
+          "result": {
+            "oneOf": [
+              {"$ref": "https://schemas.mortgage-refinancing-scan.local/1.0.0/interpretation-result.schema.json"},
+              {"type": "null"}
+            ]
+          }
+        }
+      }
+    }
+  }
+}

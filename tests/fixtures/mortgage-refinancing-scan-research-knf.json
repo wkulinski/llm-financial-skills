@@ -1,0 +1,16 @@
+{
+  "source": "knf",
+  "entries": [
+    {"entry_id":"bank-positive","lp":1,"institution_id":"positive-bank","institution_type":"cooperative_bank","legal_name":"Positive Bank Spółdzielczy","official_hosts":["positive.example.test"],"allowed_redirect_hosts":["positive.example.test","cdn.positive.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-own-costs","lp":2,"institution_id":"own-costs-bank","institution_type":"cooperative_bank","legal_name":"Own Costs Bank Spółdzielczy","official_hosts":["own-costs.example.test"],"allowed_redirect_hosts":["own-costs.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-housing-only","lp":3,"institution_id":"housing-only-bank","institution_type":"cooperative_bank","legal_name":"Housing Only Bank Spółdzielczy","official_hosts":["housing-only.example.test"],"allowed_redirect_hosts":["housing-only.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-variable","lp":4,"institution_id":"variable-bank","institution_type":"cooperative_bank","legal_name":"Variable Bank Spółdzielczy","official_hosts":["variable.example.test"],"allowed_redirect_hosts":["variable.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-split-products","lp":5,"institution_id":"split-products-bank","institution_type":"cooperative_bank","legal_name":"Split Products Bank Spółdzielczy","official_hosts":["split.example.test"],"allowed_redirect_hosts":["split.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-html-pdf","lp":6,"institution_id":"html-pdf-bank","institution_type":"cooperative_bank","legal_name":"HTML PDF Bank Spółdzielczy","official_hosts":["docs.example.test"],"allowed_redirect_hosts":["docs.example.test","cdn.docs.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-robots","lp":7,"institution_id":"robots-bank","institution_type":"cooperative_bank","legal_name":"Robots Bank Spółdzielczy","official_hosts":["robots.example.test"],"allowed_redirect_hosts":["robots.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-redirect","lp":8,"institution_id":"redirect-bank","institution_type":"cooperative_bank","legal_name":"Redirect Bank Spółdzielczy","official_hosts":["redirect.example.test"],"allowed_redirect_hosts":["redirect.example.test","cdn.redirect.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-errors","lp":9,"institution_id":"errors-bank","institution_type":"cooperative_bank","legal_name":"Errors Bank Spółdzielczy","official_hosts":["errors.example.test"],"allowed_redirect_hosts":["errors.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-shared-origin-one","lp":10,"institution_id":"shared-origin-one","institution_type":"cooperative_bank","legal_name":"Shared Origin One Bank Spółdzielczy","official_hosts":["shared.example.test"],"allowed_redirect_hosts":["shared.example.test"],"observed_at":"2026-08-06T00:00:00Z"},
+    {"entry_id":"bank-shared-origin-two","lp":11,"institution_id":"shared-origin-two","institution_type":"cooperative_bank","legal_name":"Shared Origin Two Bank Spółdzielczy","official_hosts":["shared.example.test"],"allowed_redirect_hosts":["shared.example.test"],"observed_at":"2026-08-06T00:00:00Z"}
+  ]
+}

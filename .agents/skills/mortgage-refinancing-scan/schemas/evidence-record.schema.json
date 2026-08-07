@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/evidence-record.schema.json",
+  "title": "EvidenceRecord",
+  "description": "Deterministic evidence record bound to the current run, entry and source artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "run_id",
+    "entry_id",
+    "institution_id",
+    "product_id",
+    "variant_id",
+    "field_path",
+    "source_artifact_id",
+    "url",
+    "content_sha256",
+    "excerpt",
+    "normalized_excerpt",
+    "source_type",
+    "source_locator",
+    "normalization_version"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "evidence_id": {"$ref": "common.schema.json#/$defs/evidence_id"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "entry_id": {"$ref": "common.schema.json#/$defs/entry_id"},
+    "institution_id": {"$ref": "common.schema.json#/$defs/institution_id"},
+    "product_id": {"$ref": "common.schema.json#/$defs/product_id"},
+    "variant_id": {"$ref": "common.schema.json#/$defs/variant_id"},
+    "field_path": {"$ref": "common.schema.json#/$defs/field_path"},
+    "source_artifact_id": {"$ref": "common.schema.json#/$defs/source_artifact_id"},
+    "url": {"$ref": "common.schema.json#/$defs/https_url"},
+    "content_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "excerpt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "normalized_excerpt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    },
+    "source_type": {"$ref": "common.schema.json#/$defs/source_type"},
+    "source_locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["page", "line_start", "line_end", "char_start", "char_end"],
+      "properties": {
+        "page": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "line_start": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "line_end": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "char_start": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "char_end": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    },
+    "normalization_version": {"$ref": "common.schema.json#/$defs/normalization_version"}
+  }
+}

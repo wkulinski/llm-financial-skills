@@ -1,0 +1,173 @@
+{
+  "schema_version": "1.0.0",
+  "phase": "6",
+  "tests": [
+    {
+      "test_id": "T01",
+      "script": "tools/run-init.mjs",
+      "class": "integration",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-registry.json",
+      "expected_output": "PREPARED exact-scope run",
+      "exit_code": 0,
+      "artifacts": ["manifest.json", "manifest.sha256", "registry.json", "events.jsonl", "entries/*/state.json"],
+      "components": ["lib/run-lifecycle.mjs:initializeRun"]
+    },
+    {
+      "test_id": "T02",
+      "script": "tools/run-state.mjs",
+      "class": "integration/fault",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-registry.json",
+      "expected_output": "append-only events, retry, atomic entry state, checkpoint and telemetry",
+      "exit_code": 0,
+      "artifacts": ["events.jsonl", "projection.json", "checkpoint.json", "metrics.json"],
+      "components": ["lib/run-lifecycle.mjs:appendLifecycleEvent", "lib/origin-scheduler.mjs:OriginScheduler"]
+    },
+    {
+      "test_id": "T03",
+      "script": "tools/institution-list.mjs",
+      "class": "integration/contract",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-research-bfg.json + tests/fixtures/mortgage-refinancing-scan-research-knf.json",
+      "expected_output": "deduplicated BFG/KNF registry with official host allowlists",
+      "exit_code": 0,
+      "artifacts": ["artifacts/institution-list/registry-validation.json"],
+      "components": ["lib/institution-list.mjs:mergeInstitutionRegistries", "lib/institution-list.mjs:auditRunRegistry"]
+    },
+    {
+      "test_id": "T04",
+      "script": "tools/source-discovery.mjs",
+      "class": "integration/offline",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-research.json",
+      "expected_output": "canonical deterministic candidates, robots/host rejection and URL limits",
+      "exit_code": 0,
+      "artifacts": ["artifacts/discovery/<entry_id>.json", "research-telemetry.json"],
+      "components": ["lib/source-discovery.mjs:discoverEntry", "lib/research-runtime.mjs:canonicalizeUrl"]
+    },
+    {
+      "test_id": "T05",
+      "script": "tools/source-fetch.mjs",
+      "class": "integration/fault",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-research.json",
+      "expected_output": "streamed run-local SourceArtifact records, retry/HTTP errors, cache lineage and telemetry",
+      "exit_code": 0,
+      "artifacts": ["artifacts/fetch/<entry_id>.json", "artifacts/sources/<entry_id>/*.bin", "artifacts/sources/<entry_id>/*.json", "research-telemetry.json"],
+      "components": ["lib/source-fetch.mjs:fetchEntrySources", "lib/origin-scheduler.mjs:OriginScheduler"]
+    },
+    {
+      "test_id": "T06",
+      "script": "tools/normalize.mjs",
+      "class": "integration/contract",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-research.json",
+      "expected_output": "UTF-8 Morfeusz 2 normalization artifacts with offsets and deterministic cache",
+      "exit_code": 0,
+      "artifacts": ["artifacts/normalization/<entry_id>/*.json", "cache/normalized/*.json"],
+      "components": ["lib/normalization.mjs:normalizeText", "lib/normalization.mjs:validateNormalizationArtifact"]
+    },
+    {
+      "test_id": "T07",
+      "script": "tools/evidence.mjs",
+      "class": "integration/contract",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-research.json",
+      "expected_output": "validated source-bound evidence with deterministic IDs and mismatch rejection",
+      "exit_code": 0,
+      "artifacts": ["evidence.jsonl", "artifacts/evidence/<entry_id>.json", "research-telemetry.json"],
+      "components": ["lib/evidence.mjs:buildEvidenceRecord", "lib/research-runtime.mjs:writeEvidenceJsonl"]
+    },
+    {
+      "test_id": "T08",
+      "script": "tools/interpret.mjs",
+      "class": "integration/contract/deterministic",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-interpretation.json",
+      "expected_output": "strict InterpretationResult, one-bundle qualification, explicit negative and unconfirmed outcomes, deterministic offer selection",
+      "exit_code": 0,
+      "artifacts": ["artifacts/review-context/<entry_id>.json", "artifacts/interpretation/<entry_id>.json", "evidence.jsonl", "events.jsonl", "research-telemetry.json"],
+      "components": [
+        "lib/review-context.mjs:readReviewContext",
+        "lib/review-context.mjs:buildReviewContext",
+        "lib/review-context.mjs:writeReviewContext",
+        "lib/review-context.mjs:loadSourceArtifacts",
+        "lib/review-context.mjs:compareEvidence",
+        "lib/interpretation-validate.mjs:validateReviewContext",
+        "lib/interpretation-validate.mjs:validateInterpretationOutput",
+        "lib/interpretation-validate.mjs:assertValidInterpretationOutput",
+        "lib/interpretation-validate.mjs:validateBundles",
+        "lib/offer-select.mjs:compareOffers",
+        "lib/offer-select.mjs:selectBestOffer",
+        "lib/offer-select.mjs:comparisonMode",
+        "lib/offer-select.mjs:compareRanges",
+        "lib/interpretation.mjs:buildProductBundles",
+        "lib/interpretation.mjs:interpretReviewContext",
+        "lib/interpretation.mjs:createUnconfirmedResult"
+      ]
+    },
+    {
+      "test_id": "T09",
+      "script": "tools/finalize.mjs",
+      "class": "integration/fault",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-registry.json",
+      "expected_output": "immutable snapshot, publication record, atomic current pointer and recovery",
+      "exit_code": 0,
+      "artifacts": ["published/<run_id>/snapshot.json", "published/<run_id>/evidence.jsonl", "published/<run_id>/publication.json", "published/current.json"],
+      "components": ["lib/run-lifecycle.mjs:finalizeRun", "lib/run-lifecycle.mjs:publishSnapshot"]
+    },
+    {
+      "test_id": "T10",
+      "script": "tools/abort.mjs",
+      "class": "integration/fault",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-registry.json",
+      "expected_output": "ABORTED run with reason and no publication",
+      "exit_code": 0,
+      "artifacts": ["abort.json", "events.jsonl"],
+      "components": ["lib/run-lifecycle.mjs:abortRun"]
+    },
+    {
+      "test_id": "T11",
+      "script": "tools/export-workbook.mjs",
+      "class": "integration/publication-export",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-phase5-registry.json + published snapshot",
+      "expected_output": "XLSX containing only the audited immutable published snapshot and MVP fields",
+      "exit_code": 0,
+      "artifacts": ["exported workbook .xlsx"],
+      "components": ["lib/export-workbook.mjs:exportPublishedWorkbook", "lib/xlsx.mjs:writeXlsx"]
+    },
+    {
+      "test_id": "T12",
+      "script": "tools/run-audit.mjs",
+      "class": "integration/read-only-audit",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-phase5-registry.json + published snapshot",
+      "expected_output": "read-only validation of manifest, checkpoint, telemetry, snapshot, evidence, publication and pointer hashes",
+      "exit_code": 0,
+      "artifacts": ["audit JSON report"],
+      "components": ["lib/publication-audit.mjs:auditPublication"]
+    },
+    {
+      "test_id": "T13",
+      "script": "tools/runner.mjs + tests/skills/mortgage-refinancing-scan-phase6.test.mjs + .opencode/agents/mortgage-refinancing-scan-runner.md",
+      "class": "integration/agent-contract",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-phase5-registry.json",
+      "expected_output": "exact-scope Phase 6 runner contract, bounded pipeline, full report, FINALIZED/ABORTED closure and no legacy decision state",
+      "exit_code": 0,
+      "artifacts": ["manifest.json", "checkpoint.json", "metrics.json", "pipeline-telemetry.json", "full-report.json", "publication/current.json or abort.json"],
+      "components": ["tools/runner.mjs:runControlledScan", "lib/pipeline.mjs:runBoundedPipeline", "lib/full-report.mjs:buildFullReport", ".opencode/agents/mortgage-refinancing-scan-runner.md"]
+    },
+    {
+      "test_id": "T14",
+      "script": "tests/skills/mortgage-refinancing-scan-phase5.test.mjs",
+      "class": "gold-set/deterministic",
+      "fixture": "tests/fixtures/mortgage-refinancing-scan-interpretation.json",
+      "expected_output": "qualified only with three same-bundle evidence records; explicit negatives and unconfirmed remain distinct",
+      "exit_code": 0,
+      "artifacts": ["artifacts/interpretation/<entry_id>.json", "evidence.jsonl", "published/<run_id>/snapshot.json"],
+      "components": ["lib/evidence.mjs:buildEvidenceForLiveEntry", "lib/interpretation.mjs:interpretReviewContext"]
+    },
+    {
+      "test_id": "T15",
+      "script": "tools/resource-benchmark.mjs",
+      "class": "resource-benchmark",
+      "fixture": "generated deterministic 100-URL corpus",
+      "expected_output": "healthy-500 profile, p90 <= 900000 ms, cache/304/request/resource metrics and decision parity",
+      "exit_code": 0,
+      "artifacts": ["resource-benchmark.json"],
+      "components": ["lib/resource-benchmark.mjs:runResourceBenchmark", "lib/pipeline.mjs:runBoundedPipeline"]
+    }
+  ]
+}

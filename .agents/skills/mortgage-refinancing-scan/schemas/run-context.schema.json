@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/run-context.schema.json",
+  "title": "RunContext",
+  "description": "Explicit context handed to every stage; a modifying operation without it is a contract error.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "manifest_path",
+    "run_root",
+    "registry_snapshot_path",
+    "source_registry_sha256",
+    "scope",
+    "artifact_root",
+    "transport_cache_root",
+    "normalization_cache_root",
+    "evidence_path",
+    "event_path",
+    "checkpoint_path"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "manifest_path": {"$ref": "common.schema.json#/$defs/path"},
+    "run_root": {"$ref": "common.schema.json#/$defs/path"},
+    "registry_snapshot_path": {"$ref": "common.schema.json#/$defs/path"},
+    "source_registry_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entries"],
+      "properties": {
+        "entries": {"$ref": "common.schema.json#/$defs/scope_entries"}
+      }
+    },
+    "artifact_root": {"$ref": "common.schema.json#/$defs/path"},
+    "transport_cache_root": {"$ref": "common.schema.json#/$defs/path"},
+    "normalization_cache_root": {"$ref": "common.schema.json#/$defs/path"},
+    "evidence_path": {"$ref": "common.schema.json#/$defs/path"},
+    "event_path": {"$ref": "common.schema.json#/$defs/path"},
+    "checkpoint_path": {"$ref": "common.schema.json#/$defs/path"}
+  }
+}

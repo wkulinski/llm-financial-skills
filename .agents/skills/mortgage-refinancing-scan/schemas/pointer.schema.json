@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.mortgage-refinancing-scan.local/1.0.0/pointer.schema.json",
+  "title": "PublicationPointer",
+  "description": "Atomically swapped published/current.json pointer to one complete published snapshot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "published_dir",
+    "manifest_sha256",
+    "snapshot_sha256",
+    "evidence_sha256",
+    "publication_sha256",
+    "published_at",
+    "status",
+    "coverage_status"
+  ],
+  "properties": {
+    "schema_version": {"$ref": "common.schema.json#/$defs/schema_version"},
+    "run_id": {"$ref": "common.schema.json#/$defs/run_id"},
+    "published_dir": {"$ref": "common.schema.json#/$defs/path"},
+    "manifest_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "snapshot_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "evidence_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "publication_sha256": {"$ref": "common.schema.json#/$defs/sha256"},
+    "published_at": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "status": {"$ref": "common.schema.json#/$defs/publication_status"},
+    "coverage_status": {"$ref": "common.schema.json#/$defs/coverage_status"}
+  }
+}
