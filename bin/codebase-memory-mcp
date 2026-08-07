@@ -1,0 +1,52 @@
+#!/bin/sh
+
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+
+BINARY="$REPO_ROOT/var/agent/bin/codebase-memory-mcp"
+DEFAULT_CACHE="$REPO_ROOT/var/agent/persistent/codebase-memory-main"
+
+if [ ! -x "$BINARY" ]; then
+    printf '%s\n' \
+        "codebase-memory binary not found or is not executable:" \
+        "  $BINARY" \
+        "Build it before starting MCP." >&2
+    exit 127
+fi
+
+# Resolve relative paths against this repository, not the caller's cwd.
+CACHE_DIR=${CBM_CACHE_DIR:-$DEFAULT_CACHE}
+case "$CACHE_DIR" in
+    /*) ;;
+    *) CACHE_DIR="$REPO_ROOT/$CACHE_DIR" ;;
+esac
+
+ALLOWED_ROOT=${CBM_ALLOWED_ROOT:-$REPO_ROOT}
+case "$ALLOWED_ROOT" in
+    /*) ;;
+    *) ALLOWED_ROOT="$REPO_ROOT/$ALLOWED_ROOT" ;;
+esac
+
+export CBM_CACHE_DIR="$CACHE_DIR"
+export CBM_ALLOWED_ROOT="$ALLOWED_ROOT"
+export CBM_WORKERS="${CBM_WORKERS:-1}"
+export CBM_MEM_BUDGET_MB="${CBM_MEM_BUDGET_MB:-1024}"
+export CBM_DIAGNOSTICS="${CBM_DIAGNOSTICS:-1}"
+
+mkdir -p "$CBM_CACHE_DIR"
+
+# Bootstrap configuration before the MCP server starts. Keep all bootstrap
+# output on stderr because stdout is reserved for MCP JSON-RPC messages.
+if ! "$BINARY" config set auto_index true >&2; then
+    printf '%s\n' "Unable to enable codebase-memory auto_index." >&2
+    exit 1
+fi
+
+if ! "$BINARY" config set auto_watch true >&2; then
+    printf '%s\n' "Unable to enable codebase-memory auto_watch." >&2
+    exit 1
+fi
+
+exec "$BINARY" "$@"

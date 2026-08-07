@@ -15,6 +15,8 @@ Przygotuj i aktualizuj powtarzalny raport rynkowy dla banków spółdzielczych i
 - `/data/work/analysis-state.json` — aktualne ustalenia dla instytucji.
 - `/data/work/evidence.jsonl` — fragmenty i URL-e źródeł użyte jako dowody.
 - `/data/work/automation-state.json` — stan operacyjny kolejki automatu, retry i etapów przygotowania.
+- `/data/work/runs/<run_id>/manifest.json` oraz `status.json` — niezmienny exact-scope manifest i status przebiegu.
+- `/data/work/runs/<run_id>/evidence.jsonl` — evidence stagingu bieżącego runu; globalne evidence jest aktualizowane dopiero po `finalize-run`.
 
 Arkusz XLSX jest wyłącznie eksportem dla użytkownika. Nie edytuj XLSX ręcznie jako źródła prawdy. Generuj go przez `tools/export-workbook.mjs`.
 
@@ -71,7 +73,17 @@ Nie kwalifikuj jako TAK:
 - strony informującej tylko o możliwości zmiany oprocentowania już posiadanego kredytu, jeśli nie ma oferty nowego kredytu refinansującego/spłacającego;
 - oferty, w której okresowo stała stopa dotyczy innego produktu niż produkt ze spłatą/refinansowaniem kredytu mieszkaniowego.
 
-Jeżeli brakuje jednoznacznego potwierdzenia któregokolwiek z trzech warunków, wpisz `qualifies: false` albo zostaw `qualifies: null`, jeśli strona/dokumenty są niedostępne. Wyjaśnij decyzję w `status_text`, `research_notes` i kodach powodów.
+Jeżeli brakuje jednoznacznego potwierdzenia któregokolwiek z trzech warunków, użyj `decision_status: unconfirmed` albo `pending_review`; nie mapuj braku danych na `qualifies: false`. `qualifies` jest polem kompatybilności wyliczanym z `decision_status`:
+
+| `decision_status` | `qualifies` | `review_status` |
+|---|---:|---|
+| `qualified` | `true` | `checked` |
+| `explicitly_not_qualified` | `false` | `checked` |
+| `unconfirmed` | `null` | `needs_review` |
+| `technical_error` | `null` | `error` |
+| `pending_review` | `null` | `needs_review` |
+
+`unchecked` oznacza wyłącznie brak wykonanej oceny. Wyjaśnij decyzję w `status_text`, `research_notes` i kodach powodów.
 
 # Najważniejsza zasada dotycząca oprocentowania
 
@@ -134,8 +146,20 @@ Dla danych liczbowych zapisuj dowody np. dla:
 - `offer.commission`
 - `offer.max_loan_term_years`
 - `offer.fixed_rate_period_years`
+- `offer.fixed_rate_period_years_exact`, `offer.fixed_rate_period_years_min`, `offer.fixed_rate_period_years_max`
 
 Dowód powinien zawierać `evidence_id`, jeśli pochodzi z `grep-evidence.mjs`, albo co najmniej URL, typ źródła, krótki fragment i `confidence`.
+
+W nowym runie `grep-evidence.mjs --run-manifest` zapisuje evidence do
+`data/work/runs/<run_id>/evidence.jsonl`. `evidence_id` jest deterministyczne:
+
+```text
+ev-<sha256(institution_id|product_id|field_path|url|content_sha256|normalized_excerpt)[0:24]>
+```
+
+`finalize-run` sprawdza run ID, URL, hash materiału i wszystkie referencje z
+`field_evidence`, oznacza wykorzystane rekordy `used_for_decision: true`,
+deduplikuje je i dopiero wtedy scala z `/data/work/evidence.jsonl`.
 
 # Zakres danych pierwszego przebiegu
 
@@ -175,6 +199,34 @@ Wejściem dla agenta jest jedno z poleceń użytkownika:
 - kolejny przebieg `changed-only`,
 - domknięcie kolejki już przygotowanej,
 - analiza wyjątków.
+
+### Exact-scope run i finalize boundary
+
+Każdy przebieg powinien rozpocząć się od utworzenia manifestu i stagingu:
+
+```bash
+npm run --workspace .agents/skills/bank-market-scan prepare-run -- \
+  --run-id run-example --from 1 --limit 5
+```
+
+Manifest zawiera pełne `institution_ids` i `lps`. Downstreamowe narzędzia przyjmują
+`--run-manifest`; `--from` i `--limit` mogą służyć tylko do jego wygenerowania.
+Rekord spoza manifestu jest odrzucany.
+
+Lifecycle artefaktów ma jedną granicę zapisu finalnego:
+
+```text
+prepare → process → validate → finalize
+                         ↘ abort
+```
+
+`review-batch --run-manifest` zapisuje stan do stagingu runu. Dopiero poniższe
+polecenia mogą zmienić finalny `analysis-state.json` i globalne evidence:
+
+```bash
+npm run --workspace .agents/skills/bank-market-scan finalize-run -- --run-manifest /data/work/runs/<run_id>/manifest.json
+npm run --workspace .agents/skills/bank-market-scan abort-run -- --run-manifest /data/work/runs/<run_id>/manifest.json --reason "..."
+```
 
 Minimalny zestaw plików wejściowych:
 
@@ -294,6 +346,8 @@ Faza A:
 
 - obejmuje wszystkie instytucje z `website_url`, niezależnie od `review_status`
   i `queue_stage`;
+- wykonuje wyłącznie lightweight refresh monitorowanych URL-i (`ETag`,
+  `Last-Modified`, `304` i `material_sha256`), bez pełnego search/crawl/rankingu;
 - nie uruchamia `extract-text`, `grep-evidence` ani `prepare-review-pack`;
 - nie jest ograniczana przez `--limit`;
 - zapisuje `/data/work/source-refresh-runs/<run_id>.json`;
@@ -550,7 +604,7 @@ dla rekordów jednoznacznych oraz lista wyjątków dla rekordów niejednoznaczny
 Po przygotowaniu `row-update` agent uruchamia:
 
 ```bash
-node tools/review-batch.mjs --limit 25 --require-field-evidence
+node tools/review-batch.mjs --run-manifest /data/work/runs/<run_id>/manifest.json --limit 25 --require-field-evidence
 ```
 
 Wejście tego etapu:
@@ -577,7 +631,7 @@ Po każdej większej serii agent uruchamia:
 ```bash
 node tools/validate-state.mjs --require-field-evidence
 node tools/audit-report.mjs --require-field-evidence --out /data/exports/review-report.md
-node tools/export-workbook.mjs --out /data/exports/rynek-bs-skok.xlsx
+node tools/export-workbook.mjs --run-manifest /data/work/runs/<run_id>/manifest.json --out /data/exports/rynek-bs-skok.xlsx
 ```
 
 Agent może użyć:
@@ -647,63 +701,98 @@ pełnego przygotowania.
 
 # Narzędzia
 
-## Ranking URL-i w fallback crawl
+## Ranking URL-i po discovery
 
-Ranking subagenta jest etapem nawigacyjnym, a nie decyzją finansową. Search-first
-pozostaje domyślną ścieżką. Ranking włącza się jawnie dla fallbacku:
+Ranking URL-i jest etapem nawigacyjnym, a nie decyzją finansową. Uruchamia
+się automatycznie po zamknięciu discovery — zarówno po ścieżce search-first,
+jak i po crawl fallbacku. Jeden bank otrzymuje jeden pełny manifest znanych
+kandydatów; ranker nie jest uruchamiany podczas pobierania pojedynczego URL-a.
+
+Zewnętrzne wyszukiwanie Google jest domyślnie wyłączone, ponieważ jego
+zapytania kończą się powtarzalnie blokadą `429`. Discovery przechodzi od razu do
+crawl fallbacku. Nawet przy podaniu `--google-base-url` wyszukiwanie pozostaje
+wyłączone, dopóki nie zostanie jawnie włączone przez `--enable-google-search`.
+Kontrolowany provider można wtedy wskazać przez `--google-base-url`.
+
+Zwykły workflow nie wymaga żadnej flagi rankingu:
 
 ```bash
-node tools/discover-sources.mjs --lp 1 --refresh --url-ranking
+node tools/prepare-batch.mjs --limit 25 --refresh
 ```
 
-Do kontrolowanego benchmarku bez wywołań LLM użyj:
+Domyślny provider to `deterministic`. OpenCode jest uruchamiany wyłącznie dla
+wyjątków wykrytych po deterministycznym przebiegu: remisu/top-2, wielu możliwych
+produktów, konfliktu canonical/wariantu albo niewystarczającego coverage. Błąd
+transportu, timeout, puste/niepoprawne wyjście albo odrzucona walidacja zawsze
+przełączają cały manifest na ranking deterministyczny. Do jawnej eskalacji użyj:
 
 ```bash
-node tools/prepare-batch.mjs --from 6 --limit 1 --refresh --url-ranking-deterministic
+node tools/prepare-batch.mjs --from 6 --limit 1 --refresh --ranking-provider auto
 ```
 
-Flaga `--url-ranking-deterministic` wyłącza OpenCode wyłącznie dla danego
-przebiegu; nie zmienia domyślnego trybu kolejnych uruchomień.
+Jawne wymuszenie szybkiej ścieżki pozostaje dostępne przez `--ranking-provider deterministic`.
 
-Etap ten najpierw zapisuje per-bank manifest metadanych URL-i, następnie wywołuje
-agenta `bank-market-url-ranker` z projektu OpenCode i waliduje odpowiedź. Przy
-braku OpenCode, błędzie odpowiedzi albo niepoprawnym JSON używany jest
-deterministyczny ranking awaryjny. Nie blokuje to discovery.
+`--url-ranking-deterministic` pozostaje kompatybilnym aliasem trybu
+deterministycznego. `--url-ranking` jest przestarzałym aliasem trybu `auto` i
+nie służy już do włączania funkcji.
+
+Ranker otrzymuje wyłącznie krótkie metadane URL-i. Oczywisty szum (np. karty,
+lokaty, logowanie i strony prawne) zostaje w `all_candidates`, ale jest
+deterministycznie oznaczony jako `excluded_context` i nie jest wysyłany do
+modelu. Ranker LLM może dodatkowo oznaczyć pojedynczego kandydata jako
+`excluded_context` z `priority: 0`, jeżeli na podstawie URL-a, tytułu i anchor
+textu ma wysoką pewność, że strona dotyczy np. wsparcia istniejącego długu,
+restrukturyzacji albo windykacji, a nie oferty refinansowania. Brak pozytywnych
+sygnałów nie jest wystarczającą podstawą do wykluczenia — wtedy używa
+`unknown` albo `supporting`. Kandydaci modelowi są przekazywani w jednym manifeście — normalna
+ścieżka nie dzieli listy na niezależne porcje. Przekroczenie budżetu rankingu
+albo błąd modelu kończy się pełnym rankingiem deterministycznym, nie częściowym
+rankingiem i nie blokuje discovery.
+
+Po pierwszej puli (maksymalnie 16 URL-i) wykonywana jest najwyżej jedna
+dodatkowa pula (domyślnie 8 URL-i), gdy brakuje kategorii dowodowych. Limit
+można jawnie zmienić przez `--max-additional-pools`; brakujące dane po limicie
+pozostają sygnałem do retry/eskalacji, a nie powodem do pobrania całego
+inventory. Domyślny timeout pojedynczego fetchu wynosi 8 sekund, timeout
+rankera OpenCode 120 sekund, a budżet rankingu 150 sekund.
 
 Artefakty rankingu trafiają do `/data/work/subagent-runs/<run_id>/<institution_id>/`:
 
-- `url-ranking-input.json` — manifest wejściowy;
-- `raw-response.txt` — surowa odpowiedź albo diagnostyka błędu;
-- `url-ranking.json` — ranking po walidacji i uzupełnieniu brakujących URL-i.
-
-Oczywisty szum (np. karty, lokaty, logowanie i strony prawne) jest blokowany
-deterministycznie i nie jest wysyłany do modelu. Większe manifesty są dzielone
-na porcje po 30 niejednoznacznych kandydatów; porcje mają osobne timeouty,
-retry i wpisy diagnostyczne. Łączny budżet rankingu jednego banku wynosi
-domyślnie 240 sekund, po czym pozostałe porcje przechodzą na fallback.
+- `url-ranking-input.json` — pełny manifest wejściowy;
+- `url-ranking-input.model.json` — manifest bez mechanicznie zablokowanego szumu,
+  jeśli taki szum wystąpił;
+- `raw-response.txt` i `stderr.txt` — surowa odpowiedź oraz diagnostyka adaptera;
+- `url-ranking.json` — ranking po walidacji i uzupełnieniu brakujących URL-i;
+- `validation-report.json` — wynik walidacji, provider, próby i metadane runu;
+- `selection-report.json` — pula początkowa, rozszerzenia, pokrycie i czasy.
 
 Pełna lista kandydatów pozostaje w `candidates.json` jako `all_candidates`.
-Do pierwszego fetchu wybierana jest zróżnicowana pula, zwykle 12–16 URL-i.
-Kolejne URL-e można pobrać po stwierdzeniu brakujących dowodów. Żaden URL nie
-jest usuwany z manifestu tylko dlatego, że otrzymał priorytet `0`.
+Po walidacji wybierana jest zróżnicowana pula, zwykle 12–16 URL-i. Kolejne
+URL-e można pobrać z tego samego rankingu po stwierdzeniu brakujących dowodów.
+Żaden URL nie jest usuwany z manifestu tylko dlatego, że otrzymał priorytet `0`.
 
 - `build-institution-list.mjs` — buduje listę instytucji z BFG i opcjonalnie porównuje z KNF; zapisuje hash źródła.
 - `init-project.mjs` — tworzy katalogi i inicjuje JSON-y w repozytoryjnym `/data`.
 - `reset-batch.mjs` — wykonuje backup i reset cache, artefaktów oraz opcjonalnie stanu analizy dla wskazanego zakresu.
 - `next-batch.mjs` — zwraca małą transzę niesprawdzonych, zmienionych albo wymagających review instytucji; umie też filtrować rekordy wg stanu kolejki automatu.
 - `prepare-batch.mjs` — przygotowuje wsadowo rekordy do analizy: discovery, extract, grep i review-pack oraz aktualizuje `automation-state.json`.
+- `normalize-text.mjs` — uruchamia jeden worker Morfeusz 2 dla wszystkich czytelnych tekstów danego rekordu i atomowo zapisuje run-local artefakt lematów/tokenów.
+- `reconcile-state.mjs` — preflight i jawna naprawa osieroconych referencji evidence oraz migracja pól okresu do lat; niczego nie usuwa automatycznie.
+- `read-review-context.mjs` — zwraca celowane, hashowane cytaty i kompaktowy kontekst heurystyki dla interpretacji; nie wymaga odczytu pełnych artefaktów normalizacji.
 - `review-batch.mjs` — stosuje gotowe `row-update`, waliduje je przed zapisem i przesuwa rekordy bez decyzji do `ready_for_review`.
 - `retry-batch.mjs` — wykonuje drugi przebieg dla rekordów `retry_pending`; przy wystarczających sygnałach przywraca je do `prepared`, a przy dalszych brakach eskaluje.
 - `review-manifest.mjs` — eksportuje zbiorczy manifest rekordów `ready_for_review`, `escalated`, `needs_user_review` i `error` wraz ze ścieżkami do review-packów oraz row-update.
 - `discover-sources.mjs` — zbiera kandydatów z search-first/fallback, zapisuje baseline, hashe transportu i materiału, nagłówki cache oraz sygnały zmiany.
 - `create-url-manifest.mjs` — tworzy per-bank manifest metadanych URL-i do rankingu.
 - `run-url-ranking.mjs` — uruchamia ranking OpenCode albo deterministyczny fallback.
+- `benchmark-performance.mjs` — mierzy deterministyczną ścieżkę dla 5/25/50 rekordów z RSS, procesami, timeoutami i rozmiarem cache.
 - `validate-url-ranking.mjs` — sprawdza kompletność, integralność i dozwolone wartości rankingu.
 - `expand-url-ranking.mjs` — wybiera następną porcję URL-i dla brakującej kategorii dowodów.
 - `tools/lib/source-integrity.mjs` — sprawdza unikalność cache, hash, rozmiar i możliwość odczytu każdego źródła.
 - `tools/lib/material.mjs` — wykonuje tanią normalizację HTML/PDF do wyliczenia `material_sha256`.
+- `schemas/normalization-output.schema.json` — kontrakt run-local artefaktu Morfeusz 2.
 - `extract-text.mjs` — zamienia HTML/PDF na czysty tekst w cache; jeśli dostępne, używa `pdftotext -layout` dla PDF.
-- `grep-evidence.mjs` — wycina krótkie fragmenty wokół fraz dowodowych i nadaje `evidence_id`.
+- `grep-evidence.mjs` — dopasowuje frazy do znormalizowanych tokenów, ale wycina krótkie fragmenty z oryginalnego tekstu i nadaje `evidence_id`.
 - `prepare-review-pack.mjs` — tworzy kompaktową paczkę do decyzji agenta.
 - `apply-row-update.mjs` — bezpiecznie zapisuje decyzję do `analysis-state.json`, z głębokim scalaniem sekcji.
 - `validate-state.mjs` — sprawdza typy, zakresy, kody powodów, field evidence i logiczne niespójności.
@@ -714,6 +803,22 @@ jest usuwany z manifestu tylko dlatego, że otrzymał priorytet `0`.
 - `export-evidence-index.mjs` — generuje osobny indeks źródeł.
 
 # Kontrola jakości
+
+## Product bundles i semantyczne refinansowanie
+
+Keyword jest wyłącznie sygnałem nawigacyjnym. Kryterium refinansowania musi mieć
+klasę kontekstu `commercial_refinance_of_mortgage`; `refinance_of_own_housing_expenses`,
+`existing_debt_support`, `community_or_business_loan` i `consolidation_ambiguous`
+nie spełniają kryterium samodzielnie. `homepage`, `sitemap` i kalkulator nie są
+źródłem `core`.
+
+Trzy kryteria muszą należeć do tego samego `product_bundle`, który ma stabilny
+`product_id`, wariant stopy, segment klienta i cytaty dla `housing`,
+`commercial_refinance` oraz `fixed_rate`. Brak takiego bundle daje
+`unconfirmed` albo `pending_review`, nigdy automatyczne `qualified`.
+
+Przed zmianą algorytmu decyzji uruchamiaj gold set 30 ręcznie opisanych przypadków
+z `tests/fixtures/golden-decisions.json` oraz raportuj precision/recall.
 
 Po każdej transzy sprawdź ostrzeżenia z `validate-state.mjs`. Szczególnie pilnuj:
 

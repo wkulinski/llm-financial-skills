@@ -22,12 +22,16 @@ if (!institution) throw new Error('Institution not found.');
 const cacheDir = dataPath('cache/institutions', `${String(institution.lp).padStart(3, '0')}-${slug(institution.name)}`);
 const candidatesPath = opts.candidates || path.join(cacheDir, 'candidates.json');
 const candidates = await readJson(candidatesPath);
-const runId = opts.runId || candidates.run_id || `ranking-${Date.now()}-${process.pid}`;
+const runId = opts.runId || candidates.run_id || `run-${Date.now()}-${process.pid}`;
 const manifest = buildRankingManifest({
     institution,
     homepageUrl: institution.website_url,
     runId,
-    candidates: candidates.all_candidates || candidates.candidates || []
+    candidates: candidates.all_candidates || candidates.candidates || [],
+    discovery: {
+        mode: candidates.discovery_mode || 'unknown',
+        complete: candidates.discovery_complete ?? false
+    }
 });
 const out = opts.out || path.join(cacheDir, 'url-ranking-input.json');
 await writeJsonAtomic(out, manifest);

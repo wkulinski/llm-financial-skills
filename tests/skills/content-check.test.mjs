@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
-import {evaluateContent} from '../../.agents/skills/bank-market-scan/tools/lib/content-check.mjs';
+import {classifyRefinancingContext, evaluateContent} from '../../.agents/skills/bank-market-scan/tools/lib/content-check.mjs';
 
 const keywords = {
     product: ['kredyt hipoteczny'],
@@ -24,6 +24,13 @@ function candidate(url, cacheFile, title = 'Kredyt hipoteczny') {
 }
 
 describe('deterministic content check', () => {
+    it('classifies refinancing context instead of treating every keyword as commercial evidence', () => {
+        expect(classifyRefinancingContext({title: 'Oferta kredytu'}, 'refinansowanie kosztów poniesionych na cele mieszkaniowe')).toBe('refinance_of_own_housing_expenses');
+        expect(classifyRefinancingContext({title: 'Fundusz Wsparcia'}, 'spłata zaległych rat kredytu')).toBe('existing_debt_support');
+        expect(classifyRefinancingContext({title: 'Kredyt dla wspólnot'}, 'refinansowanie kredytu')).toBe('community_or_business_loan');
+        expect(classifyRefinancingContext({title: 'Kredyt mieszkaniowy'}, 'spłata kredytu mieszkaniowego zaciągniętego w innym banku')).toBe('commercial_refinance_of_mortgage');
+    });
+
     it('accepts a single readable URL with all three coverage categories', async () => {
         const result = await evaluateContent([
             candidate('https://bank.example.pl/oferta', materialFile('<html><body>Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.</body></html>'))
@@ -70,6 +77,7 @@ describe('deterministic content check', () => {
         expect(result.product.status).toBe('unknown');
         expect(result.refinancing.status).toBe('unknown');
         expect(result.fixed_rate.status).toBe('unknown');
+        expect(result.missing_categories).toEqual(expect.arrayContaining(['refinancing', 'fixed_rate']));
         expect(result.unknown_source_count).toBe(1);
     });
 
@@ -84,6 +92,38 @@ describe('deterministic content check', () => {
         });
         expect(result.refinancing.status).toBe('present');
         expect(result.single_url_full_coverage).toBe(true);
+    });
+
+    it('recognizes the bank wording for repayment of a mortgage from another bank', async () => {
+        const result = await evaluateContent([
+            candidate('https://bank.example.pl/oferta', materialFile(
+                'Kredyt mieszkaniowy. Możliwa jest spłatę kredytu mieszkaniowego zaciągniętego w innym banku. Oprocentowanie okresowo stałe.'
+            ))
+        ], {
+            ...keywords,
+            refinancing: ['spłatę kredytu mieszkaniowego zaciągniętego w innym banku'],
+            fixed_rate: ['oprocentowanie okresowo stałe']
+        });
+        expect(result.refinancing.status).toBe('present');
+        expect(result.refinancing.matches).toBeGreaterThan(0);
+    });
+
+    it('excludes debt-support pages from new-loan refinancing evidence', async () => {
+        const result = await evaluateContent([
+            candidate('https://bank.example.pl/kredyty/mieszkaniowy', materialFile(
+                'Kredyt mieszkaniowy. Oprocentowanie okresowo stałe przez 60 miesięcy.'
+            )),
+            candidate('https://bank.example.pl/fundusz-wsparcia/', materialFile(
+                'Fundusz Wsparcia Kredytobiorców. Refinansowanie kredytu nie jest ofertą nowego kredytu. Pomoc obejmuje spłatę kredytu mieszkaniowego i zaległych rat.'
+            ), 'Fundusz Wsparcia Kredytobiorców')
+        ], keywords);
+
+        expect(result.refinancing.status).toBe('present');
+        expect(result.refinancing.review_required).toBe(true);
+        expect(result.refinancing.context_flags).toEqual([
+            {url: 'https://bank.example.pl/fundusz-wsparcia/', reason: 'existing_debt_support'}
+        ]);
+        expect(result.refinancing.decision_status).toBe('excluded_context');
     });
 
     it('passes readable two-signal material to the model instead of rejecting it heuristically', async () => {

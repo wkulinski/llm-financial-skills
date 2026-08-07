@@ -1,0 +1,14 @@
+{
+  "1": {
+    "product": true,
+    "refinancing": false,
+    "fixed_rate": true,
+    "basis": "Manual audit: the consolidation offer mentions obligations in other banks but does not establish repayment of a housing or mortgage loan."
+  },
+  "3": {
+    "product": true,
+    "refinancing": true,
+    "fixed_rate": true,
+    "basis": "Manual audit of the individual-loan page: housing loan, repayment of a housing loan taken in another bank, and periodically fixed rate occur in the same product."
+  }
+}

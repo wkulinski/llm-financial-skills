@@ -1,0 +1,789 @@
+{
+    "schemaVersion": 6,
+    "generatedAt": "2026-08-04T10:05:47.553Z",
+    "agents": [
+        "codex"
+    ],
+    "subagents": [
+        "opencode"
+    ],
+    "sources": {
+        "https://github.com/wkulinski/llm-skills": {
+            "mode": "explicit",
+            "listedAt": "2026-08-04T10:05:43.712Z",
+            "skillEntries": [
+                {
+                    "name": "agent-cache-clear",
+                    "sourcePath": ".agents/skills/agent-cache-clear",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/scripts/env-load.sh"
+                    ],
+                    "hash": {
+                        "treeSha256": "ec58e31ddda536350fa5753da8bd3b3ca270693c2e35ab25fc40783979e633e3",
+                        "files": [
+                            {
+                                "path": "scripts/clear.mjs",
+                                "sha256": "3e638e69877390fdc548f7d823408359c01eb2a9cac0210cb56c0d1776c8b052"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "b6ae2007a97da14d24e48697facf6055ee35304e4818b97396cbf79d31163a82"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "code-implement",
+                    "sourcePath": ".agents/skills/code-implement",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/context-scout-report-protocol.md",
+                        ".agents/skills/_shared/references/context-subagent-contract.md",
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/repository-context-hybrid.md",
+                        ".agents/skills/_shared/references/repository-context-scout-playbook.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                        ".agents/skills/_shared/scripts/context-criteria.mjs",
+                        ".agents/skills/_shared/scripts/context-handoff.mjs",
+                        ".agents/skills/_shared/scripts/context-manifest.mjs",
+                        ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
+                        ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
+                        ".agents/skills/_shared/scripts/context-scout-report.mjs",
+                        ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/targeted-check-decision.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "9315246508f820a937ab8b30f5e130ecf8c0135cb263640208ea088c2034b0fb",
+                        "files": [
+                            {
+                                "path": "scripts/change-inspect.mjs",
+                                "sha256": "e3f44a47246e3c4026210db916be23054fa71b00e27700b2b4629566575b40b5"
+                            },
+                            {
+                                "path": "scripts/state-clear.mjs",
+                                "sha256": "c3bc1c202552b382cf1dedac5ff77fed13d063d530a6d89d7df623f90e5cb456"
+                            },
+                            {
+                                "path": "scripts/state-init.mjs",
+                                "sha256": "46d0a27d3ec213002bbb91eb6a23432126fa1b635e1bd0b1f0d146bc623b3c93"
+                            },
+                            {
+                                "path": "scripts/state-log.mjs",
+                                "sha256": "60b1c63d3f26f951162516385fb3393db421d9628828b92d767930fa4ff831b7"
+                            },
+                            {
+                                "path": "scripts/state-readlog.mjs",
+                                "sha256": "8588dca8559360069f16e346045f740af3a2cdd6a1a88cdb63e0eb66c5bde917"
+                            },
+                            {
+                                "path": "scripts/state-utils.mjs",
+                                "sha256": "ca9777cfae26b962f65eb9af7921bf7056b3808980fd830674e731e30c57d8f2"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "897a0b47151482c59f411c9cbc84712ee682d3653e102819828992e91b89a776"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "commit-message-write",
+                    "sourcePath": ".agents/skills/commit-message-write",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "dd31290c9e751e7d2ef369f955b23e84c84bdaa8ac9e22d3d530371ee9be2f00",
+                        "files": [
+                            {
+                                "path": "scripts/commit-message-render.mjs",
+                                "sha256": "11a6fa75620505724332e2363470659051bad255ed16e0ad3b62bee5b34bdc59"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "2a2cf8155c16fdfd84e02df94cd9a8b302eb0d2ad9eae5a59ae118ac2ef731e3"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "context-refresh",
+                    "sourcePath": ".agents/skills/context-refresh",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/context-subagent-contract.md",
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "6135be43e85f39451b8d8fe9afb31ae0effb977368c8c5819892bb9026a2269d",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "d0b2ce612ebc211580b267bda358b5755a5890ac30aa9241c39c701d60a9534d"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "docs-sync",
+                    "sourcePath": ".agents/skills/docs-sync",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "dc0b8b251a29381154de771d2992f6ee0ec8266b05972f3b13bfd6477cd90655",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "4495bd93a8bb3ee2057e7a768f79bd69ebd751ab7c607e493f3829671b7b9b13"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "docs-todo",
+                    "sourcePath": ".agents/skills/docs-todo",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "7acee45ef77ec034b3f46116a18047c4c5d56f5459bf10d7fc4173352bf057fc",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "bfe58002cbccbd473af0c154cab3977d4d45c2a90c3c40928af78a5295af357a"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "gh-issue-review",
+                    "sourcePath": ".agents/skills/gh-issue-review",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "647e5ee7346cf36f09ec8f871002c7c7b846d732fd0dfa24a582c3142d3c0e60",
+                        "files": [
+                            {
+                                "path": "scripts/finish.mjs",
+                                "sha256": "945689aa63b3f4ec734d9634fd0a35bff841e831063c52466c66193a02a66d71"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "07ff19fb4a6673811fb700515ae7fc2605d609b7a9e558e43eaafd71408097ba"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "gh-issue-start",
+                    "sourcePath": ".agents/skills/gh-issue-start",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "605870024f5361e2b12d3edbe1fa75575a23b944ce737af405aaefa2cf6bcab1",
+                        "files": [
+                            {
+                                "path": "scripts/branch-preparation.mjs",
+                                "sha256": "51d821c74a8251cc328fbc37111f8c869a692ccf139b85da9abd145a9e513e11"
+                            },
+                            {
+                                "path": "scripts/start.mjs",
+                                "sha256": "eee678503f1c9afd15668a303d70c4dcefb037bd62b974f0e0b1ee2f09d4be82"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "690db622d351e1a886e77bf14b473d369de7f63d47bdec7282d71f3602d242ec"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "gh-issue-status-set",
+                    "sourcePath": ".agents/skills/gh-issue-status-set",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "a6d2db08674d7087981c585ab4326373407723ca71c6c6fca099838889e17147",
+                        "files": [
+                            {
+                                "path": "scripts/set-status.mjs",
+                                "sha256": "0c686735ecdd7f90d2fc1f742edd76cd3042c6c9e1e74cf2b098d78a22189714"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "82600bcb5941f37282f6669f66e4907343bfddbb7b7c947b32d640bc64e519a2"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "git-commit",
+                    "sourcePath": ".agents/skills/git-commit",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "f679115ba9bb33dd0684a726d29d2a897e85c269eddea1ee761faecb017d6e49",
+                        "files": [
+                            {
+                                "path": "scripts/snapshot-clean.mjs",
+                                "sha256": "bc14de2a4b7caf6682489a60858080917f4ff635a0acfb7b5a57b958bd1fb00f"
+                            },
+                            {
+                                "path": "scripts/snapshot-tools.mjs",
+                                "sha256": "f0b2c0587b696890aadda89d38721f26ec512a1dae0b8b44593303a671519ada"
+                            },
+                            {
+                                "path": "scripts/staging-sanity.mjs",
+                                "sha256": "4e615da4841431ec2379615c81e4f15bfe206a5c7a660c477937bc14924307f1"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "67d4f9c3bd1e78472d2e71edb5460c7f31de2c1358d29655b74bf00ea31d7a7f"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "handoff-refresh",
+                    "sourcePath": ".agents/skills/handoff-refresh",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "0833697257db891395651a0ef31116dab8a9d934edf6c5835a0993a7f8839609",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "b4dbe5206f98c1d1f1bfb1ec77cf88d6c141adfafbbe979258332575ae8d60d9"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "qa-run",
+                    "sourcePath": ".agents/skills/qa-run",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "9e8121c3c8c305e6c52f8a1ed652033c89818045b9a31387ad887271c5dd370d",
+                        "files": [
+                            {
+                                "path": "scripts/run-matrix.mjs",
+                                "sha256": "7f4c26d918d89aa8e4c33adb7e304d3299b740fc24acd4025eeea92ad0e9c3ff"
+                            },
+                            {
+                                "path": "scripts/run-matrix/app/run-matrix-app.mjs",
+                                "sha256": "354e4734ede086599965342aefbc3f7ea8747da6f36e177a6671edd54387e543"
+                            },
+                            {
+                                "path": "scripts/run-matrix/cache/command-cache.mjs",
+                                "sha256": "4b06c295086a90de01e4733728c86644a23636a905c1a2e7eb9090e13f20370a"
+                            },
+                            {
+                                "path": "scripts/run-matrix/change-detection/snapshot.mjs",
+                                "sha256": "913e4dd31eeab42e8a4fc04f9215138d3a491465f344dda73d178eb388a4ccf0"
+                            },
+                            {
+                                "path": "scripts/run-matrix/change-detection/working-tree.mjs",
+                                "sha256": "51ad63df739c03751065445e5a4e3d0612f8d7cee81841e55c0e8569d8720b5a"
+                            },
+                            {
+                                "path": "scripts/run-matrix/config/loader.mjs",
+                                "sha256": "fbea43617dc4a11c450dc05ea1c78bd1ce63d683adac7a4d06ab14a6cace6b67"
+                            },
+                            {
+                                "path": "scripts/run-matrix/config/normalizer.mjs",
+                                "sha256": "0c89c5f3633575e63054a0d996daae3dd7cfdf1357e20be24671873b1e6f9c3b"
+                            },
+                            {
+                                "path": "scripts/run-matrix/config/notices.mjs",
+                                "sha256": "364944c71d4405d1909e9331d64ee7fec0212f4f12acf0ca08247c3aa0952ef9"
+                            },
+                            {
+                                "path": "scripts/run-matrix/execution/command-executor.mjs",
+                                "sha256": "404f4b733c93c8e14c3d3ef40c4eb30756291eaad32aa1dac24ba4286dd27d33"
+                            },
+                            {
+                                "path": "scripts/run-matrix/execution/command-logs.mjs",
+                                "sha256": "cb8b17642243a3c62c29ffec9963318bdd050a83353d2f7d6ec62ee3a5081969"
+                            },
+                            {
+                                "path": "scripts/run-matrix/execution/output-collector.mjs",
+                                "sha256": "a2b3dfe90971555020c789180d0ac889f858f4c79e61982c6e46e2bee72cd73d"
+                            },
+                            {
+                                "path": "scripts/run-matrix/parsers/codeception-junit.mjs",
+                                "sha256": "2776ef1787e9352965886b8f72fb0f780739663d61f0ffd6eb077db0e4eba1a4"
+                            },
+                            {
+                                "path": "scripts/run-matrix/parsers/eslint-json.mjs",
+                                "sha256": "c30de4a3b03ea3a80d9e1ae2c35c95d7bd6f291cb8121976cb6d0fc3aa87b1a7"
+                            },
+                            {
+                                "path": "scripts/run-matrix/parsers/failure-summary.mjs",
+                                "sha256": "d6ac6f0d675c7cdd3d81f1049f6e8e59cb67eb68bf3f4aeb5595a8e6fd7dc0c1"
+                            },
+                            {
+                                "path": "scripts/run-matrix/parsers/phpstan-json.mjs",
+                                "sha256": "babdae44f4c121bdcc4964a099a30c238324e66cd784b53c0df80568f6c58e7b"
+                            },
+                            {
+                                "path": "scripts/run-matrix/patterns/glob.mjs",
+                                "sha256": "b4cb2451034b1e00ba9bc7ca552abaf5d5e57771e999921edd58593316744a52"
+                            },
+                            {
+                                "path": "scripts/run-matrix/patterns/pattern-files.mjs",
+                                "sha256": "9536df45123c70126e50b7d9ea959f6ccdd665606b2b78ff9e9aaac9fd5a9600"
+                            },
+                            {
+                                "path": "scripts/run-matrix/patterns/pattern-sets.mjs",
+                                "sha256": "ea14dd4c3a5b410afa3632e90c7f9f9e3baf61bfc82922c44f4404a629e1ec49"
+                            },
+                            {
+                                "path": "scripts/run-matrix/patterns/section-activation.mjs",
+                                "sha256": "0f2770cf801c1cb77827319d9f510bc97e40e97a1b880494e60348b7f1021bec"
+                            },
+                            {
+                                "path": "scripts/run-matrix/reporting/console-reporter.mjs",
+                                "sha256": "5a73d7fb3ef0b05a270415a446d3d1e21ec6db8d563da2ecdf194717e54bae97"
+                            },
+                            {
+                                "path": "scripts/run-matrix/reporting/summary-writer.mjs",
+                                "sha256": "f3430a2e350fb31e76ad67ba1a4af67a057df8632d9ff601338d18e881fa0dee"
+                            },
+                            {
+                                "path": "scripts/run-matrix/session/risk-assessment.mjs",
+                                "sha256": "b4e54ea594f3ee6f08523751da56d0e305faf3bcfd4f6ebea69c9f47086ca5e8"
+                            },
+                            {
+                                "path": "scripts/run-matrix/session/session-store.mjs",
+                                "sha256": "227775f80eab5849a38518e651a472e5b89e82e05f7f30b2899895b5749d3119"
+                            },
+                            {
+                                "path": "scripts/run-matrix/shared/hashing.mjs",
+                                "sha256": "f3ee3284e5329a581886cdfd0915b6cd097e81ba9ce1c1e6b381926d018b6446"
+                            },
+                            {
+                                "path": "scripts/run-matrix/shared/paths.mjs",
+                                "sha256": "7f5f45f9fa31ef2084b4f40ba20fabebbfd982301f7526d6b81efc4b7ab31253"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "cb23566f47f530e6d820d06920ff7191b14a4538eef1891507169a5968bf34e9"
+                            },
+                            {
+                                "path": "templates/qa-run.matrix.dist.json",
+                                "sha256": "0d63e4cedc542ce89f2e16834d7ef86fa5a8875b770a17b0ec10262ebadbf20e"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "review-quick",
+                    "sourcePath": ".agents/skills/review-quick",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                        ".agents/skills/_shared/scripts/env-load.sh"
+                    ],
+                    "hash": {
+                        "treeSha256": "496919c6fd20cb36e51daf3450d26fa4639a211993d32c4ffa4f99da634cf58e",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "16e35982f614c6fc36f6857f021f462154fc9cb5ad92b0024b50a1c8d726bab4"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "rules-sync",
+                    "sourcePath": ".agents/skills/rules-sync",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                        ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "88c8e414e26a98f61ce3984de5057bd39e8250e5d15087cb0ea43e7d6d3c636b",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "6a4f0702a34aa73a3fc821d244b9302e2fb81a6c67dd48a7135053a70c9c469b"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "skills-index-refresh",
+                    "sourcePath": ".agents/skills/skills-index-refresh",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md"
+                    ],
+                    "hash": {
+                        "treeSha256": "54eaccd4ed969182fcb789bf5886d9dce58738dd4d75546cda5fab3251b39896",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "48de1b9cf8164a50ed6a8420bdf24b2aed20d7d1fe1a01e0b3ca675527feff27"
+                            }
+                        ]
+                    }
+                }
+            ],
+            "subagentEntries": [
+                {
+                    "name": "context-refresher",
+                    "sourcePath": ".opencode/agent/context-refresher.md",
+                    "targetPath": ".opencode/agents/context-refresher.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "345a526c472a6ed9e65e38a4dbb1922d2b917733915194a180e20be2c916afc6",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "context-scout",
+                    "sourcePath": ".opencode/agent/context-scout.md",
+                    "targetPath": ".opencode/agents/context-scout.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "f3ee0bc18119debdb21164d6941026537aa445b15c4083ce1125d6fccd186c60",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "context-scout-fast",
+                    "sourcePath": ".opencode/agent/context-scout-fast.md",
+                    "targetPath": ".opencode/agents/context-scout-fast.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "bfdacafa5ba0faa827a4d0a4021ebcaaaaf6d4d22c1c725b360bd706afafa165",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "diff-reviewer",
+                    "sourcePath": ".opencode/agent/diff-reviewer.md",
+                    "targetPath": ".opencode/agents/diff-reviewer.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "790fe40c12b584834b7e9169fa2089eaad856747a268079c0b1331a76ce0b127",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "frontend-ui-engineer",
+                    "sourcePath": ".opencode/agent/frontend-ui-engineer.md",
+                    "targetPath": ".opencode/agents/frontend-ui-engineer.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "9133117b741a9184b97b34856199bd549f16a5a88a36c960a949ccc56d0cf6dd",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "implementation-worker",
+                    "sourcePath": ".opencode/agent/implementation-worker.md",
+                    "targetPath": ".opencode/agents/implementation-worker.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "d1a5ad6cfb68e6ae67a4e4c0000a014e17cd0c240c534d51996ef4f6e8d46d90",
+                        "executable": false
+                    }
+                },
+                {
+                    "name": "runtime-diagnostician",
+                    "sourcePath": ".opencode/agent/runtime-diagnostician.md",
+                    "targetPath": ".opencode/agents/runtime-diagnostician.md",
+                    "sharedFiles": [],
+                    "hash": {
+                        "sha256": "333e01fb35f73064be95e1c929dc9cec6bf9f37c81411b74bd8094790f517782",
+                        "executable": false
+                    }
+                }
+            ],
+            "sharedEntries": [
+                {
+                    "sourcePath": ".agents/skills/_shared/references/context-scout-report-protocol.md",
+                    "targetPath": ".agents/skills/_shared/references/context-scout-report-protocol.md",
+                    "hash": {
+                        "sha256": "04f5300349afb410b564714239298302ce299591df9555dc7b3599a7543f4390",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/context-subagent-contract.md",
+                    "targetPath": ".agents/skills/_shared/references/context-subagent-contract.md",
+                    "hash": {
+                        "sha256": "56b4d60ac5da815bbcd95453951478ab86470310f6cd56410060ede301ccd7fa",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:context-refresh"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                    "targetPath": ".agents/skills/_shared/references/cqrs-monolith-standard-overrides.md",
+                    "hash": {
+                        "sha256": "1c0c03265f168b756538e4611bfc3c11c42680a645a8a0668b8431c140634bf1",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:commit-message-write",
+                        "skill:context-refresh",
+                        "skill:docs-sync",
+                        "skill:git-commit",
+                        "skill:review-quick",
+                        "skill:rules-sync"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                    "targetPath": ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
+                    "hash": {
+                        "sha256": "fff0db95d95fd94462d1aeffa585786ead676b519930bac96a86e6c073d043e5",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:commit-message-write",
+                        "skill:context-refresh",
+                        "skill:git-commit",
+                        "skill:review-quick",
+                        "skill:rules-sync"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/repository-context-hybrid.md",
+                    "targetPath": ".agents/skills/_shared/references/repository-context-hybrid.md",
+                    "hash": {
+                        "sha256": "971bf1f02ab0a4979cc21ee401c32ac667106784fb8657bbb7e676a3481123c6",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/repository-context-scout-playbook.md",
+                    "targetPath": ".agents/skills/_shared/references/repository-context-scout-playbook.md",
+                    "hash": {
+                        "sha256": "22632a75925e81e18ce20dc0247f25002eafab002b25fa6080ffe48a3ef4a558",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                    "targetPath": ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                    "hash": {
+                        "sha256": "b56b809805c62672ab93afdefc62da8c191d05031b96770233eb73efa710e131",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:agent-cache-clear",
+                        "skill:code-implement",
+                        "skill:commit-message-write",
+                        "skill:context-refresh",
+                        "skill:docs-sync",
+                        "skill:docs-todo",
+                        "skill:gh-issue-review",
+                        "skill:gh-issue-start",
+                        "skill:gh-issue-status-set",
+                        "skill:git-commit",
+                        "skill:handoff-refresh",
+                        "skill:qa-run",
+                        "skill:review-quick",
+                        "skill:rules-sync",
+                        "skill:skills-index-refresh"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                    "targetPath": ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                    "hash": {
+                        "sha256": "2599abf33c0a686eb2a46da0773c00cf6d434dae28c58c0f4502d493447dc487",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:commit-message-write",
+                        "skill:context-refresh",
+                        "skill:docs-sync",
+                        "skill:git-commit",
+                        "skill:rules-sync"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                    "targetPath": ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                    "hash": {
+                        "sha256": "55f51a1f4db6249397a7dcf9639edab3ddd1805e09cf1f491103d4975647fe00",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:context-refresh",
+                        "skill:docs-sync",
+                        "skill:review-quick"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-criteria.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-criteria.mjs",
+                    "hash": {
+                        "sha256": "cbb0fccec16e71c7482b068bc19159cfea4ef0601e16b862d663df9f8c567f33",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-handoff.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-handoff.mjs",
+                    "hash": {
+                        "sha256": "ba0684ebf0b37107eabb95124c5e464b1b27fdb5786427c4dbf056d60b33a98a",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-manifest.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-manifest.mjs",
+                    "hash": {
+                        "sha256": "6135a0cd9008a829cc28507df8aec959832ecb16e256c2e582129204a99726a4",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
+                    "hash": {
+                        "sha256": "98f3f13fda2b10b69fdeca1a4aff5d09b7286851aef7052d9270f749b6672ef8",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
+                    "hash": {
+                        "sha256": "cc0c25c14fe3e80e6d9154fb9cc7ce3d9552d76e330f561a34890c8734058d28",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-scout-report.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-scout-report.mjs",
+                    "hash": {
+                        "sha256": "d61c7d8d0f29762c0e7ebe52bf55db5df0c5297f2ed7764b313914a96f424a06",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/env-load.sh",
+                    "targetPath": ".agents/skills/_shared/scripts/env-load.sh",
+                    "hash": {
+                        "sha256": "2c674233b8bc68f1f8e3ff2cc4f158d63aff1006f646327d3d7e6a1eba9e1f4d",
+                        "executable": true
+                    },
+                    "owners": [
+                        "skill:agent-cache-clear",
+                        "skill:code-implement",
+                        "skill:gh-issue-review",
+                        "skill:gh-issue-start",
+                        "skill:gh-issue-status-set",
+                        "skill:review-quick"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/issue-branch.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/issue-branch.mjs",
+                    "hash": {
+                        "sha256": "4c614d6d82459554c8a2b6db4d11312ef8c6ef7d4e259c4d852011f6607fb213",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:commit-message-write",
+                        "skill:gh-issue-review",
+                        "skill:gh-issue-start",
+                        "skill:gh-issue-status-set"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/targeted-check-decision.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/targeted-check-decision.mjs",
+                    "hash": {
+                        "sha256": "be7356c3eb9b69546356eb59a27b35b7be3bebe84119e69c4266ed80403f6e9c",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement"
+                    ]
+                }
+            ],
+            "resolved": {
+                "requestedRef": null,
+                "defaultBranch": "master",
+                "resolvedRef": "master",
+                "resolvedCommit": "eb3e853e29195b67af96eba89719f2d1a560f07b",
+                "subpath": null,
+                "resolvedAt": "2026-08-04T10:05:43.696Z"
+            }
+        }
+    }
+}

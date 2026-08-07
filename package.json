@@ -5,11 +5,16 @@
     "type": "module",
     "private": true,
     "workspaces": [
-        ".agents/skills/bank-market-scan"
+        ".agents/skills/bank-market-scan",
+        ".agents/skills/mortgage-refinancing-scan"
     ],
     "scripts": {
-        "test": "vitest run",
-        "test:watch": "vitest"
+        "lint:js": "eslint",
+        "lint:js:fix": "eslint --fix",
+        "lint:js:fix:dry": "eslint --fix-dry-run",
+        "test": "vitest run --project unit",
+        "test:integration": "vitest run --project integration",
+        "test:all": "vitest run --project unit --project integration"
     },
     "dependencies": {
     },
@@ -17,8 +22,12 @@
         "node": ">=20"
     },
     "devDependencies": {
-        "vitest": "^2.1.9"
+        "@wkulinski/lsm": "^0.4.0",
+        "vitest": "^4.1.10",
+        "@eslint/js": "^10.0.1",
+        "@stylistic/eslint-plugin": "^5.10.0",
+        "eslint": "^10.4.1",
+        "globals": "^17.6.0"
     },
-    "overrides": {
-    }
+    "overrides": {}
 }

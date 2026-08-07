@@ -1,0 +1,32 @@
+{
+    "schemaVersion": 2,
+    "agents": ["codex"],
+    "subagents": ["opencode"],
+    "sources": [
+        {
+            "source": "https://github.com/wkulinski/llm-skills",
+            "skills": [
+                "agent-cache-clear",
+                "code-implement",
+                "commit-message-write",
+                "context-refresh",
+                "docs-sync",
+                "docs-todo",
+                "gh-issue-review",
+                "gh-issue-start",
+                "gh-issue-status-set",
+                "git-commit",
+                "handoff-refresh",
+                "qa-run",
+                "review-quick",
+                "rules-sync",
+                "skills-index-refresh"
+            ],
+            "subagents": true,
+            "publish": {
+                "branchPrefix": "skills-sync/publish",
+                "createPr": true
+            }
+        }
+    ]
+}

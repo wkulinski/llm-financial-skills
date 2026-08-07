@@ -13,4 +13,13 @@ describe('review source roles', () => {
     it('keeps a tariff as supporting material', () => {
         expect(classifySourceRole({url: 'https://bank.example/taryfa-oplat'}, ['pricing'])).toBe('supporting');
     });
+
+    it('does not treat homepage or sitemap context as core evidence', () => {
+        expect(classifySourceRole({url: 'https://bank.example/'}, ['product'])).toBe('discovery_context');
+        expect(classifySourceRole({url: 'https://bank.example/sitemap.xml'}, ['product'])).toBe('discovery_context');
+    });
+
+    it('does not treat a calculator as a product proof', () => {
+        expect(classifySourceRole({url: 'https://bank.example/kalkulator-kredytowy', title: 'Kalkulator'}, ['product', 'fixed_rate'])).toBe('supporting');
+    });
 });

@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Command} from 'commander';
 import {z} from 'zod';
-import {readJson, writeJson, todayIso, ensureDir, deepMergeDefined, dataPath} from './lib/common.mjs';
+import {readJson, writeJsonAtomic, todayIso, ensureDir, deepMergeDefined, dataPath} from './lib/common.mjs';
+import {DECISION_STATUSES, normalizeRowFields} from './lib/decision-model.mjs';
 
 const EvidenceItem = z.object({
     evidence_id: z.string().optional(),
@@ -19,6 +20,7 @@ export const RowUpdate = z.object({
     institution_id: z.string().min(1),
     lp: z.number().int().positive(),
     run_id: z.string().min(1).optional(),
+    decision_status: z.enum(DECISION_STATUSES).optional(),
     review_status: z.enum(['unchecked', 'checked', 'needs_review', 'error']),
     checked_at: z.string().nullable(),
     website_available: z.boolean().nullable(),
@@ -39,6 +41,8 @@ export const RowUpdate = z.object({
         excluded_alternative_sources: z.array(z.string()).optional().default([])
     }).passthrough().optional(),
     offer: z.object({}).passthrough().optional().default({}),
+    product_bundles: z.array(z.object({}).passthrough()).optional().default([]),
+    bundle_decision: z.object({}).passthrough().optional().default({}),
     requirements: z.object({}).passthrough().optional().default({}),
     promotion: z.object({}).passthrough().optional().default({}),
     professional_groups: z.object({}).passthrough().optional().default({}),
@@ -51,7 +55,7 @@ export const RowUpdate = z.object({
 }).passthrough();
 
 const NESTED_KEYS = [
-    'qualification', 'decision_audit', 'offer', 'requirements', 'promotion', 'professional_groups',
+    'qualification', 'decision_audit', 'offer', 'product_bundles', 'bundle_decision', 'requirements', 'promotion', 'professional_groups',
     'documents', 'source_urls', 'field_status', 'field_evidence'
 ];
 
@@ -74,7 +78,9 @@ export function decisionAuditWarnings(update) {
 export function mergeRowUpdate(existing, update) {
     const merged = {...existing, ...update};
     for (const key of NESTED_KEYS) {
-        merged[key] = deepMergeDefined(existing?.[key], update?.[key]);
+        merged[key] = key === 'field_evidence' && update?.[key] !== undefined
+            ? update[key]
+            : deepMergeDefined(existing?.[key], update?.[key]);
     }
     return merged;
 }
@@ -109,7 +115,7 @@ async function main() {
         .option('--no-backup', 'do not create state backup')
         .parse(process.argv);
     const opts = program.opts();
-    const update = RowUpdate.parse(JSON.parse(await fs.readFile(opts.input, 'utf8')));
+    const update = normalizeRowFields(RowUpdate.parse(JSON.parse(await fs.readFile(opts.input, 'utf8'))));
     const auditWarnings = decisionAuditWarnings(update);
     if (auditWarnings.length) throw new Error(auditWarnings.join(' '));
     if (opts.expectedRunId && update.run_id !== opts.expectedRunId) {
@@ -126,10 +132,10 @@ async function main() {
 
     const idx = findRowForUpdate(state.rows, update);
     if (idx < 0) state.rows.push(update);
-    else state.rows[idx] = mergeRowUpdate(state.rows[idx], update);
+    else state.rows[idx] = normalizeRowFields(mergeRowUpdate(state.rows[idx], update));
     state.updated_at = todayIso();
     state.methodology_version = state.methodology_version || '2026-07-06-refinance-fixed-rate-v2';
-    await writeJson(opts.state, state);
+    await writeJsonAtomic(opts.state, state);
     console.log(`Updated lp=${update.lp} institution_id=${update.institution_id}`);
 }
 

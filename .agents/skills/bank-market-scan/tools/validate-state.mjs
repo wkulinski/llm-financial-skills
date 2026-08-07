@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import {Command} from 'commander';
 import {readJson, getDeep, dataPath} from './lib/common.mjs';
+import {CANONICAL_PERCENT_FIELDS, CANONICAL_PERIOD_FIELDS, DECISION_STATUSES, decisionStatusFromLegacy, detectOfferConflicts, qualifiesForDecisionStatus} from './lib/decision-model.mjs';
+import {evaluateProductBundles} from './lib/product-bundles.mjs';
 
 export const QUALIFICATION_EVIDENCE_FIELDS = [
     'qualification.housing_or_mortgage_loan_confirmed',
@@ -32,7 +34,17 @@ export function validateRows(rows, {requireFieldEvidence = false} = {}) {
         const p = `Lp ${r.lp} ${r.institution_id}:`;
         const q = r.qualification || {};
         const offer = r.offer || {};
-        if (r.qualifies === true) {
+        const decisionStatus = decisionStatusFromLegacy(r);
+        if (r.decision_status != null && !DECISION_STATUSES.includes(r.decision_status)) {
+            warnings.push(`${p} decision_status is not canonical.`);
+        }
+        if (r.decision_status && r.qualifies !== qualifiesForDecisionStatus(r.decision_status)) {
+            warnings.push(`${p} qualifies does not match decision_status=${r.decision_status}.`);
+        }
+        if (r.decision_status === 'unconfirmed' && r.qualifies === false) {
+            warnings.push(`${p} unconfirmed must not be reported as false.`);
+        }
+        if (r.qualifies === true || decisionStatus === 'qualified') {
             if (q.housing_or_mortgage_loan_confirmed !== true) warnings.push(`${p} qualifies=true but housing/mortgage loan not confirmed.`);
             if (q.refinance_or_repayment_of_previous_housing_mortgage_loan_confirmed !== true) warnings.push(`${p} qualifies=true but refinance/repayment not confirmed.`);
             if (q.periodically_fixed_rate_confirmed !== true) warnings.push(`${p} qualifies=true but fixed-rate variant not confirmed.`);
@@ -50,9 +62,27 @@ export function validateRows(rows, {requireFieldEvidence = false} = {}) {
                     warnings.push(`${p} qualifies=true but decision_audit is missing ${key} evidence URLs.`);
                 }
             }
+            if (Array.isArray(r.product_bundles) && r.product_bundles.length > 0 && evaluateProductBundles(r.product_bundles).qualified_bundle_count === 0) {
+                warnings.push(`${p} qualifies=true but no product_bundle contains all three criteria.`);
+            }
+            const excludedEvidence = Object.values(r.field_evidence || {}).flatMap(items => Array.isArray(items) ? items : []).some(item => item.source_role === 'excluded_context');
+            if (excludedEvidence) warnings.push(`${p} qualifies=true cannot rely on excluded_context evidence.`);
         }
         if (r.qualifies === false && (!Array.isArray(q.non_qualification_reason_codes) || q.non_qualification_reason_codes.length === 0)) {
             warnings.push(`${p} qualifies=false but non_qualification_reason_codes are missing.`);
+        }
+        for (const field of CANONICAL_PERIOD_FIELDS) {
+            const value = getDeep(r, field);
+            if (value != null && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {
+                warnings.push(`${p} ${field} must be a non-negative number of years.`);
+            }
+        }
+        for (const forbidden of ['offer.fixed_rate_period_months_exact', 'offer.fixed_rate_period_months_min', 'offer.fixed_rate_period_months_max']) {
+            if (getDeep(r, forbidden) != null) warnings.push(`${p} ${forbidden} is forbidden; normalize months to years.`);
+        }
+        for (const field of CANONICAL_PERCENT_FIELDS) {
+            const value = getDeep(r, field);
+            if (value != null && !isNumberInPercentRange(value)) warnings.push(`${p} ${field} should be decimal percent, e.g. 0.063.`);
         }
         for (const k of PERCENT_FIELDS) {
             const v = getDeep(r, k);
@@ -63,6 +93,7 @@ export function validateRows(rows, {requireFieldEvidence = false} = {}) {
             const max = getDeep(r, `${base}_max`);
             if (min != null && max != null && min > max) warnings.push(`${p} ${base}_min is greater than ${base}_max.`);
         }
+        for (const conflict of detectOfferConflicts(offer)) warnings.push(`${p} conflicting offer values: ${conflict}.`);
         const fixed = offer.fixed_nominal_rate_exact ?? offer.fixed_nominal_rate;
         const rrso = offer.rrso_exact ?? offer.rrso;
         if (fixed != null && fixed > 0.12) warnings.push(`${p} unusually high fixed nominal rate (${fixed}). Verify source.`);

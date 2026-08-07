@@ -1,0 +1,45 @@
+{
+  "outputDefaults": {
+    "outputMode": "quiet-on-pass",
+    "failTailLines": 120,
+    "maxOutputBytes": 20000,
+    "stripAnsi": true,
+    "parserInputBytes": 5242880,
+    "parser": "generic-tail"
+  },
+  "sectionOrder": ["ALWAYS_FULL", "JS_CHANGED", "AGENT_SKILLS_CHANGED", "DOCS_CHANGED"],
+  "sections": {
+    "ALWAYS_FULL": {
+      "patterns": [],
+      "commands": [
+        "npm --prefix .agents/skills/bank-market-scan run check",
+        "npm --prefix .agents/skills/mortgage-refinancing-scan run check"
+      ],
+      "runOn": ["full"],
+      "requiresFinalFullPass": false
+    },
+    "JS_CHANGED": {
+      "patterns": ["**/*.mjs", "**/*.js", "**/package.json", "**/package-lock.json", "vitest.config.mjs"],
+      "commands": ["npm test", "npm run test:integration"],
+      "runOn": ["full", "rerun"],
+      "requiresFinalFullPass": true
+    },
+    "AGENT_SKILLS_CHANGED": {
+      "patterns": [".agents/skills/**", ".opencode/agents/**"],
+      "commands": [
+        "npm --prefix .agents/skills/bank-market-scan run check",
+        "npm --prefix .agents/skills/mortgage-refinancing-scan run check",
+        "npm test",
+        "npm run test:integration"
+      ],
+      "runOn": ["full", "rerun"],
+      "requiresFinalFullPass": true
+    },
+    "DOCS_CHANGED": {
+      "patterns": ["**/*.md"],
+      "commands": [],
+      "runOn": ["full", "rerun"],
+      "requiresFinalFullPass": false
+    }
+  }
+}

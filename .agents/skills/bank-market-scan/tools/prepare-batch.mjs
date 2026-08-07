@@ -1,11 +1,23 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import {spawnSync} from 'node:child_process';
+import {spawn} from 'node:child_process';
 import {Command} from 'commander';
 import pLimit from 'p-limit';
 import {readJson, readJsonl, writeJson, todayIso, slug, dataPath} from './lib/common.mjs';
-import {markTask, assessPreprocessing, needsRetry} from './lib/automation.mjs';
+import {ensureTask, markTask, assessPreprocessing, needsRetry} from './lib/automation.mjs';
+import {
+    ensureRunSnapshot,
+    manifestIncludes,
+    readRunManifest,
+    runAnalysisStatePath,
+    runAutomationStatePath,
+    runManifestPath,
+    runReviewPackPath,
+    runRowUpdatePath,
+    runStatusPath
+} from './lib/run-manifest.mjs';
+import {prepareRun} from './prepare-run.mjs';
 
 const program = new Command();
 program
@@ -14,13 +26,20 @@ program
     .option('--bank-concurrency <number>', 'parallel bank preprocessing limit', v => parseInt(v, 10), 2)
     .option('--mode <mode>', 'pending_prepare|retry|all|changed-only', 'pending_prepare')
     .option('--refresh', 'refresh source discovery')
+    .option('--offline', 'prohibit network discovery; requires --skip-discovery')
     .option('--fresh', 'start selected source discovery without a previous baseline')
     .option('--run-id <id>', 'run identifier propagated to generated artifacts')
+    .option('--run-manifest <path>', 'exact-scope run manifest')
     .option('--skip-discovery', 'reuse existing candidates cache and skip discover-sources')
-    .option('--url-ranking', 'rank fallback URLs with the configured OpenCode subagent')
+    .option('--url-ranking', 'rank fallback URLs with the configured OpenCode agent')
     .option('--url-ranking-deterministic', 'use deterministic ranking instead of OpenCode')
+    .option('--ranking-provider <provider>', 'URL ranking provider: auto or deterministic', value => {
+        if (!['auto', 'deterministic'].includes(value)) throw new Error('Ranking provider must be auto or deterministic.');
+        return value;
+    }, 'deterministic')
     .option('--google-host <host>', 'Google host override')
     .option('--google-base-url <url>', 'Google base URL override for controlled providers')
+    .option('--enable-google-search', 'enable external Google search; disabled by default')
     .option('--changed-only', 'only continue when source content changed since last fetch')
     .option('--skip-unchanged', 'pass through to discover-sources', true)
     .option('--institutions <path>', 'institutions JSON', dataPath('base/institutions.current.json'))
@@ -29,44 +48,113 @@ program
     .option('--continue-on-error', 'continue processing the batch after errors', true)
     .parse(process.argv);
 const opts = program.opts();
+if (opts.offline && !opts.skipDiscovery) throw new Error('--offline requires --skip-discovery.');
+if (opts.offline && (opts.refresh || opts.enableGoogleSearch)) throw new Error('--offline cannot be combined with --refresh or --enable-google-search.');
+if (opts.urlRanking) console.error('Warning: --url-ranking is deprecated; ranking now runs automatically after discovery.');
 const changedOnlyMode = opts.mode === 'changed-only' || opts.changedOnly;
-const runId = opts.runId || `run-${Date.now()}-${process.pid}`;
+let runId = opts.runId || `run-${Date.now()}-${process.pid}`;
 
 const institutions = await readJson(opts.institutions);
-const state = await readJson(opts.state);
-const automation = await readJson(opts.automationState);
-const taskById = new Map((automation.tasks || []).map(task => [task.institution_id, task]));
-const stateById = new Map((state.rows || []).map(row => [row.institution_id, row]));
+let state = await readJson(opts.state);
+let automation = await readJson(opts.automationState);
+let taskById = new Map((automation.tasks || []).map(task => [task.institution_id, task]));
+let stateById = new Map((state.rows || []).map(row => [row.institution_id, row]));
+let runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
+let activeRunManifestPath = opts.runManifest || runManifestPath(runId);
+if (runManifest) runId = runManifest.run_id;
+
+if (!runManifest) {
+    const manifestScope = changedOnlyMode
+        ? institutions.institutions.filter(inst => inst.website_url && inst.base_list_status !== 'missing_website_url')
+        : institutions.institutions.filter(inst => shouldInclude(inst, taskById.get(inst.institution_id), stateById.get(inst.institution_id))).slice(0, opts.limit);
+    const preparedRun = await prepareRun({
+        runId,
+        institutions,
+        selected: manifestScope,
+        mode: changedOnlyMode ? 'changed-only' : (opts.mode === 'retry' ? 'retry' : 'fresh'),
+        searchEnabled: opts.enableGoogleSearch
+    });
+    runManifest = preparedRun.manifest;
+    activeRunManifestPath = preparedRun.manifestPath;
+}
+const runStatePath = runAnalysisStatePath(activeRunManifestPath);
+const runAutomationPath = runAutomationStatePath(activeRunManifestPath);
+await ensureRunSnapshot(runStatePath, opts.state, state);
+await ensureRunSnapshot(runAutomationPath, opts.automationState, automation);
+state = await readJson(runStatePath);
+automation = await readJson(runAutomationPath);
+for (const institution of institutions.institutions.filter(inst => manifestIncludes(runManifest, inst.institution_id, inst.lp))) {
+    ensureTask(automation, institution, runId);
+}
+taskById = new Map((automation.tasks || []).map(task => [task.institution_id, task]));
+stateById = new Map((state.rows || []).map(row => [row.institution_id, row]));
 let automationWriteQueue = Promise.resolve();
 
 function persistAutomation() {
-    automationWriteQueue = automationWriteQueue.then(() => writeJson(opts.automationState, automation));
+    automationWriteQueue = automationWriteQueue.then(() => writeJson(runAutomationPath, automation));
     return automationWriteQueue;
 }
 
 function run(args, {stdio = 'pipe'} = {}) {
-    const r = spawnSync(process.execPath, args, {stdio, encoding: 'utf8'});
-    if (r.status !== 0) {
-        const stderr = `${r.stderr || ''}`.trim();
-        throw new Error(stderr || `${args.join(' ')} failed with status ${r.status}`);
-    }
-    return r.stdout || '';
+    return new Promise((resolve, reject) => {
+        const child = spawn(process.execPath, args, {stdio});
+        let stdout = '';
+        let stderr = '';
+        if (stdio === 'pipe') {
+            child.stdout.on('data', chunk => { stdout += chunk; });
+            child.stderr.on('data', chunk => { stderr += chunk; });
+        }
+        child.on('error', reject);
+        child.on('close', status => {
+            if (status !== 0) reject(new Error(stderr.trim() || `${args.join(' ')} failed with status ${status}`));
+            else resolve(stdout);
+        });
+    });
 }
 
 function shouldInclude(inst, task, row) {
     if (!inst.website_url || inst.base_list_status === 'missing_website_url') return false;
-    if (!changedOnlyMode && row?.review_status === 'checked') return false;
+    if (runManifest && !manifestIncludes(runManifest, inst.institution_id, inst.lp)) return false;
+    if (!changedOnlyMode && !(runManifest && (opts.fresh || opts.mode === 'all' || opts.mode === 'fresh')) && row?.review_status === 'checked') return false;
     if (opts.from && inst.lp < opts.from) return false;
     const stage = task?.stage || 'pending_prepare';
-    if (opts.mode === 'pending_prepare') return stage === 'pending_prepare';
+    if (opts.mode === 'pending_prepare') return stage === 'pending_prepare' || stage === 'preparing';
     if (opts.mode === 'retry') return stage === 'retry_pending' || stage === 'retry';
     return true;
 }
 
+function rankingArgs() {
+    return ['--ranking-provider', opts.urlRanking ? 'auto' : (opts.urlRankingDeterministic ? 'deterministic' : opts.rankingProvider)];
+}
+
+function rankingMetadata(candidates) {
+    const ranking = candidates?.url_ranking;
+    if (!ranking) return null;
+    return {
+        provider: ranking.provider || null,
+        mode: ranking.mode || null,
+        run_id: candidates.run_id || null,
+        inventory_sha256: ranking.inventory_sha256 || null,
+        candidate_count: ranking.candidate_count || 0,
+        model_candidate_count: ranking.model_candidate_count || 0,
+        locked_noise_count: ranking.locked_noise_count || 0,
+        selected_pool_count: Array.isArray(ranking.selected_pool) ? ranking.selected_pool.length : 0,
+        expanded_pool_count: Array.isArray(ranking.expanded_pools)
+            ? ranking.expanded_pools.reduce((count, pool) => count + (Array.isArray(pool) ? pool.length : 0), 0)
+            : 0,
+        fallback_reason: ranking.fallback_reason || null
+    };
+}
+
+function setRankingMetadata(task, candidates) {
+    if (task) task.url_ranking = rankingMetadata(candidates);
+    return task?.url_ranking || null;
+}
+
 async function invalidateDerivedArtifacts(inst) {
     const lp = String(inst.lp).padStart(3, '0');
-    await fs.rm(dataPath('work/review-packs', `lp-${lp}.md`), {force: true});
-    await fs.rm(dataPath('work/row-updates', `lp-${lp}.json`), {force: true});
+    await fs.rm(runReviewPackPath(activeRunManifestPath, lp), {force: true});
+    await fs.rm(runRowUpdatePath(activeRunManifestPath, lp), {force: true});
 }
 
 const summary = {
@@ -106,16 +194,19 @@ async function refreshSources() {
     for (const inst of eligible) {
         const task = taskById.get(inst.institution_id);
         try {
-            run([
+            await run([
                 path.resolve(path.dirname(new URL(import.meta.url).pathname), 'discover-sources.mjs'),
                 '--lp', String(inst.lp),
                 '--refresh',
                 '--run-id', runId,
                 ...(opts.fresh ? ['--fresh'] : []),
+                ...(changedOnlyMode ? ['--lightweight-refresh'] : []),
                 ...(opts.skipUnchanged ? ['--skip-unchanged'] : []),
                 ...(opts.googleHost ? ['--google-host', opts.googleHost] : []),
                 ...(opts.googleBaseUrl ? ['--google-base-url', opts.googleBaseUrl] : []),
-                ...(opts.urlRanking || opts.urlRankingDeterministic ? [opts.urlRankingDeterministic ? '--url-ranking-deterministic' : '--url-ranking'] : []),
+                ...(opts.enableGoogleSearch ? ['--enable-google-search'] : []),
+                ...rankingArgs(),
+                '--run-manifest', activeRunManifestPath,
                 '--source-refresh-run-id', runId
             ]);
             const cacheDir = dataPath('cache/institutions', `${String(inst.lp).padStart(3, '0')}-${slug(inst.name)}`);
@@ -124,6 +215,7 @@ async function refreshSources() {
                 throw new Error('Discovery did not write the current source refresh metadata.');
             }
             if (task) {
+                task.url_ranking = rankingMetadata(candidates);
                 Object.assign(task, {
                     source_refresh_run_id: runId,
                     sources_refreshed_at: candidates.sources_refreshed_at,
@@ -148,6 +240,7 @@ async function refreshSources() {
                     preprocessing_technical_flags: ['source_refresh_error'],
                     preprocessing_insufficient_flags: [],
                     preprocessing_quality_warnings: [],
+                    url_ranking: null,
                     last_error: error.message
                 });
             }
@@ -171,6 +264,16 @@ if (changedOnlyMode) {
     if (refresh.manifest.status !== 'complete') {
         automation.updated_at = todayIso();
         await persistAutomation();
+        await writeJson(runStatusPath(activeRunManifestPath), {
+            run_id: runId,
+            phase: 'prepare',
+            status: 'partial',
+            manifest_path: activeRunManifestPath,
+            institution_ids: runManifest.institution_ids,
+            lps: runManifest.lps,
+            summary,
+            updated_at: new Date().toISOString()
+        });
         console.log(JSON.stringify(summary, null, 2));
         process.exit(0);
     }
@@ -198,9 +301,8 @@ if (changedOnlyMode) {
     }
     selected = changed.slice(0, opts.limit);
 } else {
-    selected = institutions.institutions
-        .filter(inst => shouldInclude(inst, taskById.get(inst.institution_id), stateById.get(inst.institution_id)))
-        .slice(0, opts.limit);
+    selected = institutions.institutions.filter(inst => shouldInclude(inst, taskById.get(inst.institution_id), stateById.get(inst.institution_id)));
+    if (!opts.runManifest) selected = selected.slice(0, opts.limit);
 }
 
 const bankLimit = pLimit(Math.max(1, opts.bankConcurrency || 1));
@@ -213,7 +315,8 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
             stage: opts.mode === 'retry' ? 'retry' : 'preparing',
             run_id: runId,
             attempt_count: (task.attempt_count || 0) + 1,
-            last_error: null
+            last_error: null,
+            url_ranking: null
         });
         await persistAutomation();
 
@@ -227,14 +330,17 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
                 ...(opts.skipUnchanged ? ['--skip-unchanged'] : []),
                 ...(opts.googleHost ? ['--google-host', opts.googleHost] : []),
                 ...(opts.googleBaseUrl ? ['--google-base-url', opts.googleBaseUrl] : []),
-                ...(opts.urlRanking || opts.urlRankingDeterministic ? [opts.urlRankingDeterministic ? '--url-ranking-deterministic' : '--url-ranking'] : [])
+                ...(opts.enableGoogleSearch ? ['--enable-google-search'] : []),
+                ...rankingArgs(),
+                '--run-manifest', activeRunManifestPath
             ];
-            run([
+            await run([
                 ...discoveryArgs
             ]);
         }
 
         const candidates = await readJson(path.join(cacheDir, 'candidates.json'));
+        const ranking = setRankingMetadata(task, candidates);
         const hasChanges = candidates.homepage_changed_since_last_fetch === true
             || (candidates.all_candidates || []).some(candidate => candidate.changed_since_last_fetch === true);
         if (!changedOnlyMode && opts.changedOnly && !hasChanges) {
@@ -254,9 +360,17 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
             return;
         }
 
-        run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'extract-text.mjs'), '--lp', String(inst.lp)]);
-        run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'grep-evidence.mjs'), '--lp', String(inst.lp)]);
-        run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'prepare-review-pack.mjs'), '--lp', String(inst.lp), '--skip-preprocess']);
+        await run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'extract-text.mjs'), '--lp', String(inst.lp), '--run-manifest', activeRunManifestPath]);
+        await run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'normalize-text.mjs'), '--lp', String(inst.lp), '--run-manifest', activeRunManifestPath]);
+        await run([path.resolve(path.dirname(new URL(import.meta.url).pathname), 'grep-evidence.mjs'), '--lp', String(inst.lp), '--run-manifest', activeRunManifestPath]);
+        await run([
+            path.resolve(path.dirname(new URL(import.meta.url).pathname), 'prepare-review-pack.mjs'),
+            '--lp', String(inst.lp),
+            '--skip-preprocess',
+            '--run-manifest', activeRunManifestPath,
+            '--state', runStatePath,
+            '--output', runReviewPackPath(activeRunManifestPath, inst.lp)
+        ]);
 
         const evidenceRows = await readJsonl(path.join(cacheDir, 'evidence.candidates.jsonl'));
         const sourceRows = await readJsonl(path.join(cacheDir, 'source-text.jsonl'));
@@ -278,17 +392,19 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
             institution_id: inst.institution_id,
             stage,
             preprocessing_status: assessment.preprocessing_status,
-            preprocessing_risk_flags: assessment.preprocessing_risk_flags
+            preprocessing_risk_flags: assessment.preprocessing_risk_flags,
+            url_ranking_provider: ranking?.provider || null,
+            url_ranking_fallback_reason: ranking?.fallback_reason || null
         });
     } catch (error) {
-        markTask(task, {
-            stage: 'error',
-            preprocessing_status: 'technical_error',
-            preprocessing_technical_flags: ['batch_execution_error'],
-            preprocessing_insufficient_flags: [],
-            preprocessing_quality_warnings: [],
-            last_error: error.message
-        });
+        if (task) markTask(task, {
+                stage: 'error',
+                preprocessing_status: 'technical_error',
+                preprocessing_technical_flags: ['batch_execution_error'],
+                preprocessing_insufficient_flags: [],
+                preprocessing_quality_warnings: [],
+                last_error: error.message
+            });
         summary.processed += 1;
         summary.errors += 1;
         summary.items.push({lp: inst.lp, institution_id: inst.institution_id, stage: 'error', error: error.message});
@@ -301,4 +417,14 @@ await Promise.all(selected.map(inst => bankLimit(async () => {
 
 automation.updated_at = todayIso();
 await persistAutomation();
+await writeJson(runStatusPath(activeRunManifestPath), {
+    run_id: runId,
+    phase: 'prepare',
+    status: summary.errors || summary.refresh_errors ? 'partial' : 'complete',
+    manifest_path: activeRunManifestPath,
+    institution_ids: runManifest.institution_ids,
+    lps: runManifest.lps,
+    summary,
+    updated_at: new Date().toISOString()
+});
 console.log(JSON.stringify(summary, null, 2));

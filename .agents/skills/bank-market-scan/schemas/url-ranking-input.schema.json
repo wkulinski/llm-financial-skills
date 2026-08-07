@@ -1,32 +1,77 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "required": ["schema_version", "institution_id", "lp", "name", "homepage_url", "run_id", "candidates"],
-  "properties": {
-    "schema_version": {"const": "1.0"},
-    "institution_id": {"type": "string", "minLength": 1},
-    "lp": {"type": "integer"},
-    "name": {"type": "string"},
-    "homepage_url": {"type": "string", "format": "uri"},
-    "run_id": {"type": "string", "minLength": 1},
-    "candidates": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["candidate_ref", "candidate_id", "url", "title", "anchor_text", "source", "relation", "technical_status"],
-        "properties": {
-          "candidate_id": {"type": "string", "minLength": 1},
-          "candidate_ref": {"type": "string", "pattern": "^c[0-9]{4}$"},
-          "url": {"type": "string", "format": "uri"},
-          "title": {"type": "string"},
-          "anchor_text": {"type": "string"},
-          "source": {"type": "string"},
-          "relation": {"type": "string"},
-          "technical_status": {"type": "string"}
-        },
-        "additionalProperties": true
+  "oneOf": [
+    {"$ref": "#/$defs/manifest10"},
+    {"$ref": "#/$defs/manifest11"}
+  ],
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "required": ["candidate_ref", "candidate_id", "url", "title", "anchor_text", "source", "relation", "technical_status"],
+      "properties": {
+        "candidate_ref": {"type": "string", "pattern": "^c[0-9]{4}$"},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "format": "uri"},
+        "title": {"type": "string"},
+        "anchor_text": {"type": "string"},
+        "snippet": {"type": "string"},
+        "source": {"type": "string", "minLength": 1},
+        "query": {"type": ["string", "null"]},
+        "search_rank": {"type": ["integer", "null"]},
+        "relation": {"type": "string", "minLength": 1},
+        "technical_status": {"type": "string", "minLength": 1},
+        "url_signals": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "manifestBase": {
+      "type": "object",
+      "required": ["schema_version", "institution_id", "lp", "name", "homepage_url", "run_id", "candidates"],
+      "properties": {
+        "schema_version": {"type": "string"},
+        "institution_id": {"type": "string", "minLength": 1},
+        "lp": {"type": ["integer", "null"]},
+        "name": {"type": "string"},
+        "homepage_url": {"type": "string", "format": "uri"},
+        "run_id": {"type": "string", "minLength": 1},
+        "candidates": {"type": "array", "items": {"$ref": "#/$defs/candidate"}}
       }
+    },
+    "manifest10": {
+      "allOf": [
+        {"$ref": "#/$defs/manifestBase"},
+        {
+          "type": "object",
+          "properties": {"schema_version": {"const": "1.0"}},
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "manifest11": {
+      "allOf": [
+        {"$ref": "#/$defs/manifestBase"},
+        {
+          "type": "object",
+          "required": ["discovery"],
+          "properties": {
+            "schema_version": {"const": "1.1"},
+            "discovery": {
+              "type": "object",
+              "required": ["mode", "complete", "candidate_count", "model_candidate_count", "locked_noise_count", "inventory_sha256"],
+              "properties": {
+                "mode": {"type": "string", "minLength": 1},
+                "complete": {"type": "boolean"},
+                "candidate_count": {"type": "integer", "minimum": 0},
+                "model_candidate_count": {"type": "integer", "minimum": 0},
+                "locked_noise_count": {"type": "integer", "minimum": 0},
+                "inventory_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+              },
+              "additionalProperties": true
+            }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
     }
-  },
-  "additionalProperties": false
+  }
 }

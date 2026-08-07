@@ -1,0 +1,1 @@
+Node.js ESM, Node >=20. Root package uses npm workspaces with `.agents/skills/bank-market-scan`. Root tests use Vitest. bank-market-scan uses commander, cheerio, fast-xml-parser, html-to-text, p-limit, pdf-parse, zod, ExcelJS. OpenCode subagents are configured in `../../.opencode/agents/`; runtime data/cache is under `data/`.

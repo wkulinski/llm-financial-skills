@@ -15,9 +15,18 @@ npm-debug.log
 yarn-error.log
 
 docs/HANDOFF.md
-default-reviewers.txt
-.agents/project_path.txt
 
 /docs/draft/
 /var/
 /data/
+
+/.agents/skills/*
+!/.agents/skills/bank-market-scan/
+!/.agents/skills/bank-market-scan/**
+!/.agents/skills/mortgage-refinancing-scan/
+!/.agents/skills/mortgage-refinancing-scan/**
+
+/.opencode/agents/*
+!/.opencode/agents/bank-market-scan-runner.md
+!/.opencode/agents/bank-market-url-ranker.md
+!/.opencode/agents/mortgage-refinancing-scan-runner.md

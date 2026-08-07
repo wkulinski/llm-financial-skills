@@ -3,12 +3,17 @@ import path from 'node:path';
 import {Command} from 'commander';
 import ExcelJS from 'exceljs';
 import {readJson, readJsonl, getDeep, boolToPl, ensureDir, bundledPath, dataPath} from './lib/common.mjs';
+import {normalizeRowFields} from './lib/decision-model.mjs';
+import {readRunManifest, runStatusPath} from './lib/run-manifest.mjs';
+import {validateFieldEvidenceReferences} from './lib/evidence-store.mjs';
+import {validateRows} from './validate-state.mjs';
 
 const program = new Command();
 program
     .option('--institutions <path>', 'institutions JSON', dataPath('base/institutions.current.json'))
     .option('--analysis <path>', 'analysis JSON', dataPath('work/analysis-state.json'))
     .option('--evidence <path>', 'evidence JSONL', dataPath('work/evidence.jsonl'))
+    .option('--run-manifest <path>', 'finalized exact-scope run manifest')
     .option('--out <path>', 'output XLSX', dataPath('exports/rynek-bs-skok.xlsx'))
     .parse(process.argv);
 const opts = program.opts();
@@ -16,6 +21,17 @@ const institutions = await readJson(opts.institutions);
 const state = await readJson(opts.analysis);
 const evidence = await readJsonl(opts.evidence);
 const columns = await readJson(bundledPath('schemas/workbook-columns.json'));
+if (opts.runManifest) {
+    const manifest = await readRunManifest(opts.runManifest);
+    const status = await readJson(runStatusPath(opts.runManifest));
+    if (status.status !== 'finalized') throw new Error(`Export requires finalized run; current status is ${status.status || 'unknown'}.`);
+    const scopedRows = state.rows.filter(row => manifest.institution_ids.includes(row.institution_id));
+    const validationWarnings = validateRows(scopedRows, {requireFieldEvidence: true});
+    const evidenceErrors = validateFieldEvidenceReferences(scopedRows, evidence, {runId: manifest.run_id, strict: true});
+    if (validationWarnings.length || evidenceErrors.length) {
+        throw new Error(`Export blocked by evidence validation: ${[...validationWarnings, ...evidenceErrors].join(' | ')}`);
+    }
+}
 const analysisById = new Map(state.rows.map(r => [r.institution_id, r]));
 const exactFallbacks = new Map([
     ['offer.commission_min', 'offer.commission_exact'],
@@ -24,6 +40,8 @@ const exactFallbacks = new Map([
     ['offer.fixed_nominal_rate_max', 'offer.fixed_nominal_rate_exact'],
     ['offer.rrso_min', 'offer.rrso_exact'],
     ['offer.rrso_max', 'offer.rrso_exact']
+    ,['offer.fixed_rate_period_years_min', 'offer.fixed_rate_period_years_exact']
+    ,['offer.fixed_rate_period_years_max', 'offer.fixed_rate_period_years_exact']
 ]);
 
 function countFieldEvidence(row) {
@@ -37,9 +55,10 @@ function valueFor(col, inst, row) {
     else if (col.key === 'field_evidence_count') v = countFieldEvidence(row);
     else if (col.source === 'institution') v = getDeep(inst, col.key);
     else {
-        v = getDeep(row || {}, col.key);
+        const canonicalRow = normalizeRowFields(row || {});
+        v = getDeep(canonicalRow, col.key);
         const exactKey = exactFallbacks.get(col.key);
-        if (v == null && exactKey) v = getDeep(row || {}, exactKey);
+        if (v == null && exactKey) v = getDeep(canonicalRow, exactKey);
     }
     if (col.type === 'bool_pl') return boolToPl(v);
     if (col.type === 'list') return Array.isArray(v) ? v.join('; ') : (v ?? '');

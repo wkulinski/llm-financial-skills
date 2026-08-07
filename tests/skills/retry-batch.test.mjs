@@ -19,7 +19,7 @@ function readJson(file) {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function writeCandidateFixture(cacheDir, {baseUrl, htmlName, htmlText, riskFlags = [], sufficientForAnalysis = false, productRelation = {status: 'unknown'}}) {
+function writeCandidateFixture(cacheDir, {baseUrl, htmlName, htmlText, riskFlags = [], sufficientForAnalysis = false, productRelation = {status: 'unknown'}, urlRanking = null}) {
     fs.mkdirSync(cacheDir, {recursive: true});
     const htmlPath = path.join(cacheDir, htmlName);
     fs.writeFileSync(htmlPath, htmlText);
@@ -58,6 +58,7 @@ function writeCandidateFixture(cacheDir, {baseUrl, htmlName, htmlText, riskFlags
         broad_candidate_count: 1,
         prioritized_candidate_count: 1,
         preprocessing_risk_flags: riskFlags,
+        url_ranking: urlRanking,
         sufficient_for_analysis: sufficientForAnalysis,
         product_relation: productRelation,
         candidates: [candidate],
@@ -101,7 +102,15 @@ describe('retry-batch', () => {
             htmlText: '<html><body>Kredyt mieszkaniowy. spłata wcześniejszego kredytu mieszkaniowego. oprocentowanie okresowo stałe przez 5 lat.</body></html>',
             riskFlags: ['missing_refinancing_hits'],
             sufficientForAnalysis: true,
-            productRelation: {status: 'confirmed', basis: 'single_url_full_coverage'}
+            productRelation: {status: 'confirmed', basis: 'single_url_full_coverage'},
+            urlRanking: {
+                provider: 'deterministic',
+                mode: 'automatic_after_discovery',
+                inventory_sha256: 'retry-inventory',
+                candidate_count: 2,
+                selected_pool: [`https://bank-a.example/full-offer`],
+                expanded_pools: []
+            }
         });
         writeCandidateFixture(cacheB, {
             baseUrl: 'https://bank-b.example',
@@ -115,14 +124,22 @@ describe('retry-batch', () => {
             encoding: 'utf8',
             env: toolEnv(cwd)
         });
-        expect(summary).toContain('"prepared": 1');
-        expect(summary).toContain('"escalated": 1');
+        const result = JSON.parse(summary);
+        expect(result.prepared).toBe(1);
+        expect(result.escalated).toBe(1);
 
-        const automation = readJson(path.join(cwd, 'data/work/automation-state.json'));
+        const automation = readJson(path.join(cwd, 'data/work/runs', result.run_id, 'automation-state.json'));
         expect(automation.tasks.find(task => task.institution_id === 'bank_a').stage).toBe('prepared');
         expect(automation.tasks.find(task => task.institution_id === 'bank_b').stage).toBe('escalated');
         expect(automation.tasks.find(task => task.institution_id === 'bank_a').preprocessing_status).toBe('sufficient');
         expect(automation.tasks.find(task => task.institution_id === 'bank_a').preprocessing_quality_warnings).toContain('missing_refinancing_hits');
+        expect(automation.tasks.find(task => task.institution_id === 'bank_a').url_ranking).toMatchObject({
+            provider: 'deterministic',
+            inventory_sha256: 'retry-inventory',
+            candidate_count: 2,
+            selected_pool_count: 1
+        });
         expect(automation.tasks.find(task => task.institution_id === 'bank_b').preprocessing_insufficient_flags).toContain('insufficient_for_analysis');
+        expect(readJson(path.join(cwd, 'data/work/automation-state.json')).tasks.every(task => task.stage === 'retry_pending')).toBe(true);
     });
 });

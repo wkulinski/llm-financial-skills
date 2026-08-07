@@ -4,18 +4,21 @@ import path from 'node:path';
 import {Command} from 'commander';
 import {readJson, ensureDir, boolToPl, getDeep, dataPath} from './lib/common.mjs';
 import {validateRows} from './validate-state.mjs';
+import {manifestIncludes, readRunManifest} from './lib/run-manifest.mjs';
 
 const program = new Command();
 program
     .option('--institutions <path>', 'institutions JSON', dataPath('base/institutions.current.json'))
     .option('--state <path>', 'analysis state JSON', dataPath('work/analysis-state.json'))
     .option('--out <path>', 'markdown report', dataPath('exports/review-report.md'))
+    .option('--run-manifest <path>', 'limit report to an exact-scope run')
     .option('--require-field-evidence', 'include missing field-evidence warnings for TAK rows')
     .parse(process.argv);
 const opts = program.opts();
 const institutions = await readJson(opts.institutions);
 const state = await readJson(opts.state);
-const rows = state.rows || [];
+const runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
+const rows = (state.rows || []).filter(row => !runManifest || manifestIncludes(runManifest, row.institution_id, row.lp));
 const byId = new Map(institutions.institutions.map(i => [i.institution_id, i]));
 const checked = rows.filter(r => r.review_status === 'checked');
 const yes = checked.filter(r => r.qualifies === true);
@@ -41,6 +44,7 @@ const suspiciousRates = checked.filter(r => {
 
 const md = `# Raport kontrolny rynku BS/SKOK\n\n` +
     `Wygenerowano: ${new Date().toISOString()}\n\n` +
+    (runManifest ? `- Run: ${runManifest.run_id}\n- Zakres: LP ${runManifest.lps.join(', ')}\n\n` : '') +
     `## Podsumowanie\n\n` +
     `- Instytucje w liście bazowej: ${institutions.institutions.length}\n` +
     `- Sprawdzone: ${checked.length}\n` +

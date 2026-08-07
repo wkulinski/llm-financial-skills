@@ -122,6 +122,7 @@ describe('CLI path stability', () => {
             }
         ].map(row => JSON.stringify(row)).join('\n') + '\n');
 
+        execFileSync(node, [path.join(skillRoot, 'tools/normalize-text.mjs'), '--cache-dir', cacheDir], {cwd, encoding: 'utf8', env: toolEnv(cwd)});
         execFileSync(node, [path.join(skillRoot, 'tools/grep-evidence.mjs'), '--cache-dir', cacheDir], {cwd, encoding: 'utf8', env: toolEnv(cwd)});
         const rows = readJsonl(path.join(cacheDir, 'evidence.candidates.jsonl'));
         expect(rows.length).toBeGreaterThan(0);
@@ -150,8 +151,8 @@ describe('CLI path stability', () => {
         fs.writeFileSync(path.join(cwd, 'data/work/automation-state.json'), JSON.stringify({
             schema_version: '1.0',
             tasks: [
-                {lp: 1, institution_id: 'bank_a', stage: 'prepared', attempt_count: 1, preprocessing_risk_flags: [], last_error: null, last_processed_at: '2026-07-10'},
-                {lp: 2, institution_id: 'bank_b', stage: 'retry_pending', attempt_count: 2, preprocessing_risk_flags: ['few_sources'], last_error: null, last_processed_at: '2026-07-10'}
+                {lp: 1, institution_id: 'bank_a', stage: 'prepared', attempt_count: 1, preprocessing_risk_flags: [], last_error: null, last_processed_at: '2026-07-10', url_ranking: {provider: 'opencode', candidate_count: 3, selected_pool_count: 2}},
+                {lp: 2, institution_id: 'bank_b', stage: 'retry_pending', attempt_count: 2, preprocessing_risk_flags: ['few_sources'], last_error: null, last_processed_at: '2026-07-10', url_ranking: {provider: 'deterministic_fallback', candidate_count: 5, selected_pool_count: 3, fallback_reason: 'timeout'}}
             ]
         }));
         const report = execFileSync(node, [path.join(skillRoot, 'tools/queue-report.mjs')], {cwd, encoding: 'utf8', env: toolEnv(cwd)});
@@ -159,6 +160,11 @@ describe('CLI path stability', () => {
         expect(report).toContain('pending_prepare: 0');
         expect(report).toContain('prepared: 1');
         expect(report).toContain('retry_pending: 1');
+        expect(report).toContain('opencode: 1');
+        expect(report).toContain('deterministic_fallback: 1');
+        expect(report).toContain('Ranking fallbacks: 1');
+        expect(report).toContain('Ranking inventory candidates: 8');
+        expect(report).toContain('Ranking selected pool URLs: 5');
     });
 
     it('parses only the BFG institution table and ignores nav/legal links', () => {

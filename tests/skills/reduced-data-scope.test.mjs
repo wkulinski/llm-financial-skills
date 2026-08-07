@@ -30,11 +30,13 @@ function makeProject() {
 describe('reduced decision data scope', () => {
     it('exports only decision-relevant workbook columns', () => {
         const columns = JSON.parse(fs.readFileSync(path.join(skillRoot, 'schemas/workbook-columns.json'), 'utf8'));
-        expect(columns).toHaveLength(23);
+        expect(columns).toHaveLength(26);
         const headers = columns.map(column => column.xlsx);
         expect(headers).toContain('Prowizja min');
         expect(headers).toContain('Oprocentowanie okresowo stałe min');
         expect(headers).toContain('RRSO min');
+        expect(headers).toContain('Status decyzji');
+        expect(headers).toContain('Okres stałego oprocentowania (lata) exact');
         for (const removed of [
             'WIBOR dla okresu stałego - tenor',
             'Marża dla okresu stałego - minimalna',

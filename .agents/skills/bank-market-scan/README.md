@@ -7,16 +7,63 @@ Zestaw skilla i lokalnych narzędzi dla agenta Codex do cyklicznego badania ofer
 Katalog skilla zawiera wyłącznie kod, manifest i schematy. Pliki robocze, cache, eksporty i stan analizy trafiają do `/data` w katalogu głównym projektu.
 
 Dodatkowy stan operacyjny automatu jest trzymany w `/data/work/automation-state.json`. Służy do śledzenia etapów kolejki i retry, nie zastępuje `analysis-state.json`.
+Każdy nowy przebieg ma również exact-scope manifest i status w `/data/work/runs/<run_id>/`.
 
 ## Szybki start
 
 ```bash
 npm install
+uv venv .venv
+uv pip install --python .venv/bin/python -r requirements.txt
 node tools/init-project.mjs
 node tools/progress-report.mjs
 node tools/queue-report.mjs
+node tools/prepare-run.mjs --run-id run-example --from 1 --limit 5
 node tools/prepare-batch.mjs --limit 25 --refresh
 node tools/next-batch.mjs --n 5
+```
+
+Benchmark ekstrakcji treści uruchamia macierz starego parsera i `main-content`,
+każdy wariant z lematyzacją Morfeusz 2 i bez niej. Morfeusz 2 jest uruchamiany
+jako jeden lokalny worker Python na cały batch:
+
+```bash
+npm run benchmark-content -- \
+  --python /ścieżka/do/python-z-morfeusz2 \
+  --out /data/work/runs/content-pipeline-benchmark.json
+```
+
+Podczas zwykłego discovery worker Morfeusza jest uruchamiany automatycznie.
+Morfeusz 2 jest wymagany — brak modułu kończy analizę jawnym błędem, a pipeline
+nie używa fallbacku surface-form. Jeżeli interpreter nie jest domyślnym
+`.venv/bin/python`, ustaw `MORFEUSZ_PYTHON`.
+
+Po ekstrakcji tekstu batch zapisuje również tymczasowy artefakt
+`normalized-text.json` (dla runu exact-scope pod `/data/work/runs/<run_id>/normalization/`).
+Artefakt zawiera lematy, tokeny i offsety związane z hashem oryginalnego tekstu.
+`grep-evidence.mjs` wymaga kompletnego artefaktu i pobiera cytaty z oryginalnego
+tekstu, używając znormalizowanych tokenów wyłącznie do dopasowania.
+
+Do interpretacji używaj celowanego odczytu zamiast otwierania pełnych artefaktów:
+
+```bash
+node tools/read-review-context.mjs --run-manifest /data/work/runs/<run_id>/manifest.json --lp 3 --criterion all
+```
+
+Narzędzie zwraca oryginalne cytaty, identyfikatory evidence, role źródeł,
+hashy i kompaktowy wynik heurystyki. Pełny tekst lub `excluded_context` dociągaj
+tylko przez `--evidence-id`, `--url` albo `--include-excluded-context`.
+
+Przed nowym runem wykonaj preflight spójności stanu:
+
+```bash
+node tools/reconcile-state.mjs --fail-on-orphans
+```
+
+Naprawa historycznych evidence jest jawna i nie usuwa danych:
+
+```bash
+node tools/reconcile-state.mjs --repair-from-backups --normalize-state --fail-on-orphans
 ```
 
 Czysty, zakresowy restart wykonuj wyłącznie przez `reset-batch.mjs`, który
@@ -62,11 +109,17 @@ node tools/audit-report.mjs --out /data/exports/review-report.md
 - Usunięto z pierwszego przebiegu osobne pola/evidence dla WIBOR-u, marży, wymagań i dokumentów; warunki promocji są zachowywane tylko wtedy, gdy są potrzebne do interpretacji wybranego wariantu.
 - Review-pack zawiera indeks pełnych materiałów `source-text.jsonl`; snippety służą wyłącznie jako nawigacja.
 - Każdy run ma `run_id`, a decyzja z innego runu nie może zostać zastosowana do bieżącej kolejki.
+- Manifest runu zawiera dokładne `institution_ids` i `lps`; każdy downstreamowy etap odrzuca rekord spoza manifestu.
+- `decision_status` jest kanonicznym źródłem decyzji, a `qualifies` jest wyłącznie polem kompatybilności.
+- `finalize-run` jest jedynym miejscem scalającym evidence runu z globalnym indeksem; `abort-run` nie zmienia finalnego stanu.
 - Pliki źródłowe cache są identyfikowane hashem pełnego URL-a, więc różne strony nie mogą nadpisać sobie treści.
 - Discovery i ekstrakcja sprawdzają hash, rozmiar, canonical URL oraz spójność `cache_file`; niespójność jest błędem technicznym, nie brakiem oferty.
 - Heurystyka słów kluczowych nie jest już samodzielną bramką odrzucającą; czytelny materiał z co najmniej dwoma sygnałami trafia do oceny agenta.
 - Canonical `www`/non-`www`, końcowy `/` i `/index.html` są normalizowane; błędy canonical na pobocznych stronach są ostrzeżeniami, nie blokadą całego banku.
 - Review-pack oznacza źródła jako `core`, `supporting` albo `excluded_context`, a `row-update` dla `TAK` wymaga `decision_audit` potwierdzającego wspólny produkt i wariant.
+- Product bundle łączy trzy kryteria z jednym produktem/wariantem; sama fraza refinansowania, źródło `excluded_context`, homepage, sitemap lub kalkulator nie może dać `TAK`.
+- Gold set semantyczny znajduje się w `tests/fixtures/golden-decisions.json` i obejmuje 30 przypadków z oczekiwanym `decision_status`.
+- Ranking deterministyczny jest domyślną szybką ścieżką; OpenCode jest eskalowany tylko dla remisu, wielu bundle, konfliktu metadanych albo brakującego coverage. `changed-only` wykonuje najpierw lekki refresh monitorowanych URL-i.
 
 ## Najważniejsza reguła
 
@@ -81,7 +134,7 @@ node tools/prepare-batch.mjs --mode changed-only --refresh --limit 25
 ```
 
 Faza A odświeża wszystkie instytucje z adresem strony i nie jest ograniczana
-przez `--limit`. Faza B uruchamia `extract-text`, evidence i review-pack tylko
+przez `--limit`. Faza B uruchamia `extract-text`, `normalize-text`, evidence i review-pack tylko
 dla ofert z `offer_changed_since_last_fetch: true`; `--limit` dotyczy wyłącznie
 tej fazy. Banki bez zmiany otrzymują `unchanged_sources`.
 

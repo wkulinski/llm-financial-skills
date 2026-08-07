@@ -2,6 +2,20 @@ import fs from 'node:fs/promises';
 import {normalizeUrlIdentity, sha256} from './common.mjs';
 
 const SHA256_RE = /^[a-f0-9]{64}$/i;
+export const NAVIGATION_NOISE_RE = /(?:\/page\/\d+(?:\/|$)|[?&](?:page|paged)=\d+|[?&]et_blog(?:=|&|$)|starsze wpisy|older posts|next posts|poprzednie wpisy|archiwum|pagination)/i;
+
+export function hardExclusionReason(candidate = {}) {
+    if ((candidate.source_integrity_flags || []).includes('source_url_mismatch')) return 'source_url_mismatch';
+    const status = Number(candidate.status);
+    if (status === 403 || status === 404) return `http_${status}`;
+    const metadata = `${candidate.url || ''} ${candidate.final_url || ''} ${candidate.title || ''} ${candidate.html_title || ''} ${candidate.anchor_text || ''}`;
+    if (NAVIGATION_NOISE_RE.test(metadata)) return 'navigation_or_archive_noise';
+    return null;
+}
+
+export function isHardExcludedSourceCandidate(candidate = {}) {
+    return Boolean(hardExclusionReason(candidate));
+}
 
 export function isCriticalSourceCandidate(candidate = {}) {
     // A blocked category page canonically pointing at a 404 is crawl noise,

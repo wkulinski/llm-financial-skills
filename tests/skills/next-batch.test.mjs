@@ -15,6 +15,15 @@ function env(root) {
     return {...process.env, BANK_MARKET_SCAN_PROJECT_ROOT: root};
 }
 
+function expectCommandFailure(root, args) {
+    expect(() => execFileSync(node, args, {
+        cwd: root,
+        encoding: 'utf8',
+        env: env(root),
+        stdio: ['ignore', 'pipe', 'ignore']
+    })).toThrow();
+}
+
 function writeFixture(root, {manifestStatus = 'complete', cacheRunId = 'run-1', includePreviousComplete = false} = {}) {
     fs.mkdirSync(path.join(root, 'data/base'), {recursive: true});
     fs.mkdirSync(path.join(root, 'data/work/source-refresh-runs'), {recursive: true});
@@ -70,20 +79,12 @@ describe('next-batch changed-sources', () => {
     it('rejects a partial refresh instead of selecting from stale cache', () => {
         const root = makeTempDir();
         writeFixture(root, {manifestStatus: 'partial', includePreviousComplete: true});
-        expect(() => execFileSync(node, [nextBatch, '--mode', 'changed-sources'], {
-            cwd: root,
-            encoding: 'utf8',
-            env: env(root)
-        })).toThrow();
+        expectCommandFailure(root, [nextBatch, '--mode', 'changed-sources']);
     });
 
     it('rejects cache from a different refresh cycle', () => {
         const root = makeTempDir();
         writeFixture(root, {cacheRunId: 'run-old'});
-        expect(() => execFileSync(node, [nextBatch, '--mode', 'changed-sources'], {
-            cwd: root,
-            encoding: 'utf8',
-            env: env(root)
-        })).toThrow();
+        expectCommandFailure(root, [nextBatch, '--mode', 'changed-sources']);
     });
 });

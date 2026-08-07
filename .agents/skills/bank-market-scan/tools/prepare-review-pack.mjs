@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {spawnSync} from 'node:child_process';
+import {spawn} from 'node:child_process';
 import {Command} from 'commander';
 import {readJson, readJsonl, ensureDir, slug, boolToPl, bundledPath, dataPath} from './lib/common.mjs';
 import {validateCandidateCaches} from './lib/source-integrity.mjs';
 import {classifySourceRole} from './lib/source-roles.mjs';
+import {manifestIncludes, readRunManifest, runAnalysisStatePath, runReviewPackPath} from './lib/run-manifest.mjs';
 
 const program = new Command();
 program
@@ -14,33 +15,52 @@ program
     .option('--refresh')
     .option('--fresh')
     .option('--run-id <id>')
+    .option('--run-manifest <path>', 'exact-scope run manifest')
+    .option('--state <path>', 'analysis state JSON')
+    .option('--output <path>', 'review pack output path')
     .option('--skip-preprocess', 'use existing cache and do not rerun discovery/extract/grep')
     .option('--expanded', 'show a wider candidate/snippet set for retry/escalation workflows')
     .parse(process.argv);
 const opts = program.opts();
 if (!opts.lp && !opts.institutionId) throw new Error('Pass --lp or --institution-id.');
 const institutions = await readJson(dataPath('base/institutions.current.json'));
-const state = await readJson(dataPath('work/analysis-state.json'));
+const runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
+const statePath = opts.state || (runManifest ? runAnalysisStatePath(opts.runManifest) : dataPath('work/analysis-state.json'));
+const state = await readJson(statePath);
 const inst = institutions.institutions.find(i => (opts.lp && i.lp === opts.lp) || (opts.institutionId && i.institution_id === opts.institutionId));
 if (!inst) throw new Error('Institution not found.');
 const cacheDir = dataPath('cache/institutions', `${String(inst.lp).padStart(3, '0')}-${slug(inst.name)}`);
-const out = dataPath('work/review-packs', `lp-${String(inst.lp).padStart(3, '0')}.md`);
+if (runManifest && !manifestIncludes(runManifest, inst.institution_id, inst.lp)) {
+    throw new Error(`Record outside run manifest: institution_id=${inst.institution_id} lp=${inst.lp}`);
+}
+const out = opts.output || (runManifest ? runReviewPackPath(opts.runManifest, inst.lp) : dataPath('work/review-packs', `lp-${String(inst.lp).padStart(3, '0')}.md`));
 
 function run(args) {
-    const r = spawnSync(process.execPath, args, {stdio: opts.refresh ? 'inherit' : 'pipe'});
-    if (r.status !== 0) throw new Error(`${args.join(' ')} failed`);
+    return new Promise((resolve, reject) => {
+        const stdio = opts.refresh ? 'inherit' : 'pipe';
+        const child = spawn(process.execPath, args, {stdio});
+        let stderr = '';
+        if (stdio === 'pipe') {
+            child.stdout.on('data', () => {});
+            child.stderr.on('data', chunk => { stderr += chunk; });
+        }
+        child.on('error', reject);
+        child.on('close', status => status === 0 ? resolve() : reject(new Error(stderr.trim() || `${args.join(' ')} failed`)));
+    });
 }
 
 if (!opts.skipPreprocess) {
-    await fs.rm(out, {force: true});
-    const runId = opts.runId || `pack-${Date.now()}-${process.pid}`;
-    run([
+        await fs.rm(out, {force: true});
+        const runId = opts.runId || `pack-${Date.now()}-${process.pid}`;
+        await run([
         bundledPath('tools/discover-sources.mjs'), '--lp', String(inst.lp), '--run-id', runId,
         ...(opts.refresh || opts.fresh ? ['--refresh'] : []),
-        ...(opts.fresh ? ['--fresh'] : [])
-    ]);
-    run([bundledPath('tools/extract-text.mjs'), '--lp', String(inst.lp)]);
-    run([bundledPath('tools/grep-evidence.mjs'), '--lp', String(inst.lp)]);
+        ...(opts.fresh ? ['--fresh'] : []),
+        ...(opts.runManifest ? ['--run-manifest', opts.runManifest] : [])
+        ]);
+        await run([bundledPath('tools/extract-text.mjs'), '--lp', String(inst.lp), ...(opts.runManifest ? ['--run-manifest', opts.runManifest] : [])]);
+        await run([bundledPath('tools/normalize-text.mjs'), '--lp', String(inst.lp), ...(opts.runManifest ? ['--run-manifest', opts.runManifest] : [])]);
+        await run([bundledPath('tools/grep-evidence.mjs'), '--lp', String(inst.lp), ...(opts.runManifest ? ['--run-manifest', opts.runManifest] : [])]);
 }
 
 const candidates = await readJson(path.join(cacheDir, 'candidates.json'));
@@ -103,6 +123,10 @@ const sourceIndex = indexedCandidates.map((candidate, index) => {
     const categories = [...new Set(decisionEvidence.filter(ev => ev.url === url).map(ev => ev.category))];
     return `${index + 1}. role=${classifySourceRole(candidate, categories)} | ${url} | title=${candidate.title || ''} | type=${source?.source_type || candidate.content_type || ''} | fetched=${source?.fetched_at || candidate.fetched_at || ''} | chars=${source?.text?.length || 0} | evidence=${categories.join(', ') || 'none'}`;
 }).join('\n');
+const bundles = candidates.content_check?.product_bundles || [];
+const bundleSection = bundles.length
+    ? `\n## Product bundles\n\n${bundles.map(bundle => `- ${bundle.product_id}: ${bundle.name}; audience=${bundle.audience}; rate_variant=${bundle.rate_variant}; housing=${bundle.criteria.housing.length}; commercial_refinance=${bundle.criteria.commercial_refinance.length}; fixed_rate=${bundle.criteria.fixed_rate.length}`).join('\n')}\n- Bundle decision: ${candidates.content_check?.bundle_decision?.decision_status || 'unconfirmed'}\n`
+    : '\n## Product bundles\n\nBrak rozpoznanych bundle\n';
 
 const md = `# Lp. ${inst.lp} — ${inst.name}\n\n` +
     `## Dane bazowe\n\n- Typ: ${inst.type}\n- URL: ${inst.website_url || ''}\n- Status dotychczasowy: ${current?.review_status || 'unchecked'}\n- Dotychczas qualifies: ${boolToPl(current?.qualifies)}\n\n` +
@@ -122,14 +146,15 @@ const md = `# Lp. ${inst.lp} — ${inst.name}\n\n` +
     `## Indeks materiałów źródłowych\n\n` +
     `Pełny materiał znajduje się w ${path.join(cacheDir, 'source-text.jsonl')}. Agent ma czytać pełne rekordy wskazanych źródeł; poniższe snippety są wyłącznie nawigacją.\n\n` +
     `Role źródeł: **core** oznacza stronę konkretnego produktu mieszkaniowego/hipotecznego; **supporting** oznacza taryfę, dokument lub materiał pomocniczy; **excluded_context** oznacza inny produkt albo segment i nie może samodzielnie dostarczać wartości ani potwierdzać kwalifikacji.\n\n` +
-    sourceIndex + '\n' +
-    sec('Fragmenty: produkt mieszkaniowy/hipoteczny', byCat.get('product')) +
+     sourceIndex + '\n' +
+     bundleSection +
+     sec('Fragmenty: produkt mieszkaniowy/hipoteczny', byCat.get('product')) +
     sec('Fragmenty: spłata/refinansowanie wcześniejszego kredytu', byCat.get('refinancing')) +
     sec('Fragmenty: okresowo stałe oprocentowanie', byCat.get('fixed_rate')) +
     sec('Fragmenty: prowizja / RRSO / oprocentowanie', byCat.get('pricing')) +
     `\n## Uwaga o kompletności\n\nTen review-pack jest skrótem. Brak snippetów heurystycznych nie oznacza braku danych w źródłach. Przy flagach ryzyka albo skąpych trafieniach agent powinien sięgać szerzej do cache i pełnej listy źródeł. Row-update musi zawierać run_id=${candidates.run_id || 'z bieżącego zadania'}.\n` +
     `\n## Instrukcja decyzji\n\nWpisz TAK tylko jeśli potwierdzone są trzy warunki: produkt mieszkaniowy/hipoteczny, spłata/refinansowanie wcześniejszego/innego kredytu mieszkaniowego/hipotecznego, okresowo stałe oprocentowanie. Nie wymagaj literalnej frazy „refinansowanie”. Nie wpisuj danych z okresu po stałej stopie ani z role=excluded_context.\n\nDla każdej ważnej liczby i każdego z trzech kryteriów zapisz field_evidence z evidence_id albo URL-em i krótkim fragmentem. W row-update dodaj decision_audit z nazwą produktu, potwierdzeniem samego produktu/wariantu oraz URL-ami dowodów dla trzech kryteriów. Dla NIE zapisz qualification.non_qualification_reason_codes, np. no_refinance_or_repayment_confirmed albo no_periodically_fixed_rate_confirmed. Dla TAK zapisz qualification.reason_codes: housing_or_mortgage_loan_confirmed, refinance_or_repayment_of_previous_housing_mortgage_loan_confirmed, periodically_fixed_rate_confirmed.\n\nJeżeli bank podaje zakres, używaj pól *_min i *_max; pojedynczą wartość wpisuj także jako *_exact lub do starego pola kompatybilnego wstecz.\n`;
-await ensureDir(dataPath('work/review-packs'));
+await ensureDir(path.dirname(out));
 const tempOut = `${out}.${candidates.run_id || `tmp-${process.pid}`}.tmp`;
 await fs.writeFile(tempOut, md, 'utf8');
 await fs.rename(tempOut, out);

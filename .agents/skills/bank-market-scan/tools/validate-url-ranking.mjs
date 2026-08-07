@@ -2,7 +2,7 @@
 import fs from 'node:fs/promises';
 import {Command} from 'commander';
 import {readJson, writeJson, dataPath} from './lib/common.mjs';
-import {validateRanking} from './lib/url-ranking.mjs';
+import {normalizeCompactRanking, validateRanking} from './lib/url-ranking.mjs';
 
 const program = new Command();
 program
@@ -14,7 +14,7 @@ program
     .parse(process.argv);
 const opts = program.opts();
 const manifest = await readJson(opts.manifest);
-const ranking = await readJson(opts.ranking);
+const ranking = normalizeCompactRanking(manifest, await readJson(opts.ranking));
 const result = validateRanking(manifest, ranking, {allowPartial: opts.fillMissing});
 const report = {
     valid: result.ok,

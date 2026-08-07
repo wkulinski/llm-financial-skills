@@ -1,0 +1,96 @@
+{
+  "schema_version": "stage0-baseline-1.0",
+  "captured_at": "2026-07-28",
+  "scope": "LP1-LP11",
+  "source_snapshot": {
+    "candidates_glob": "data/cache/institutions/*/candidates.json",
+    "captured_from_existing_cache": true,
+    "note": "Snapshot of the current cached discovery runs; this file does not change the runtime cache."
+  },
+  "repository": {
+    "branch": "master",
+    "head": "93609bd4b79eba2daf234e932ba12db8a25857c8",
+    "status_short_at_capture": [
+      " M .gitignore",
+      "D  .opencode/opencode.json",
+      "A  .opencode/opencode.jsonc",
+      " M package-lock.json",
+      " M package.json",
+      "?? .serena/memories/",
+      "?? bin/",
+      "?? skills.json",
+      "?? skills.lock.json"
+    ],
+    "note": "The worktree was already dirty before stage 0; these changes are not part of this task."
+  },
+  "verification": {
+    "npm test": {
+      "status": "FAIL",
+      "test_files": {
+        "passed": 25,
+        "failed": 7,
+        "total": 32
+      },
+      "tests": {
+        "passed": 89,
+        "failed": 0
+      },
+      "failure_summary": [
+        "Six shared context script files were collected as empty Vitest suites; one hybrid-run suite also attempted to read a missing context-refresh manifest.",
+        "The OpenCode integration suite could not resolve context-scout-fast or context-scout in the current local agent configuration."
+      ]
+    },
+    "npm --prefix .agents/skills/bank-market-scan run check": {
+      "status": "PASS"
+    },
+    "git diff --check -- .agents/skills/bank-market-scan tests/skills docs/draft": {
+      "status": "PASS"
+    }
+  },
+  "aggregates": {
+    "all_candidates": 925,
+    "active_candidates": 260,
+    "downloaded_sources": 246,
+    "timings_ms": {
+      "search": 8168,
+      "seed_fetch": 3246,
+      "fallback_crawl": 805007,
+      "total": 890297
+    },
+    "providers": {
+      "deterministic": 6,
+      "deterministic_fallback": 5
+    },
+    "fallback_count": 5,
+    "coverage": {
+      "product": {
+        "present": 10,
+        "absent": 1,
+        "unknown": 0
+      },
+      "refinancing": {
+        "present": 5,
+        "absent": 6,
+        "unknown": 0
+      },
+      "fixed_rate": {
+        "present": 11,
+        "absent": 0,
+        "unknown": 0
+      }
+    }
+  },
+  "rows": [
+    {"lp": 1, "all_candidates": 100, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 630, "seed_fetch": 0, "fallback_crawl": 149208, "total": 152539}, "coverage": {"product": "present", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic_fallback"},
+    {"lp": 2, "all_candidates": 86, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 746, "seed_fetch": 1, "fallback_crawl": 147378, "total": 153547}, "coverage": {"product": "present", "refinancing": "present", "fixed_rate": "present"}, "provider": "deterministic_fallback"},
+    {"lp": 3, "all_candidates": 113, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 704, "seed_fetch": 0, "fallback_crawl": 162549, "total": 171220}, "coverage": {"product": "present", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic_fallback"},
+    {"lp": 4, "all_candidates": 120, "active_candidates": 16, "downloaded_sources": 12, "timings_ms": {"search": 691, "seed_fetch": 1, "fallback_crawl": 178635, "total": 181831}, "coverage": {"product": "present", "refinancing": "present", "fixed_rate": "present"}, "provider": "deterministic_fallback"},
+    {"lp": 5, "all_candidates": 78, "active_candidates": 16, "downloaded_sources": 15, "timings_ms": {"search": 1047, "seed_fetch": 2, "fallback_crawl": 144524, "total": 147940}, "coverage": {"product": "present", "refinancing": "present", "fixed_rate": "present"}, "provider": "deterministic_fallback"},
+    {"lp": 6, "all_candidates": 100, "active_candidates": 100, "downloaded_sources": 92, "timings_ms": {"search": 707, "seed_fetch": 3239, "fallback_crawl": 487, "total": 41510}, "coverage": {"product": "present", "refinancing": "present", "fixed_rate": "present"}, "provider": "deterministic"},
+    {"lp": 7, "all_candidates": 58, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 644, "seed_fetch": 0, "fallback_crawl": 7955, "total": 10627}, "coverage": {"product": "present", "refinancing": "present", "fixed_rate": "present"}, "provider": "deterministic"},
+    {"lp": 8, "all_candidates": 120, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 744, "seed_fetch": 1, "fallback_crawl": 2644, "total": 3852}, "coverage": {"product": "present", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic"},
+    {"lp": 9, "all_candidates": 78, "active_candidates": 16, "downloaded_sources": 15, "timings_ms": {"search": 694, "seed_fetch": 0, "fallback_crawl": 7052, "total": 9244}, "coverage": {"product": "present", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic"},
+    {"lp": 10, "all_candidates": 55, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 696, "seed_fetch": 0, "fallback_crawl": 3569, "total": 11654}, "coverage": {"product": "present", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic"},
+    {"lp": 11, "all_candidates": 17, "active_candidates": 16, "downloaded_sources": 16, "timings_ms": {"search": 865, "seed_fetch": 2, "fallback_crawl": 1006, "total": 6333}, "coverage": {"product": "absent", "refinancing": "absent", "fixed_rate": "present"}, "provider": "deterministic"}
+  ]
+}

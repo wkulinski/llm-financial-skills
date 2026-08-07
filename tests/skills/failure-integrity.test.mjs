@@ -20,7 +20,7 @@ function send(response, status, body, headers = {'content-type': 'text/html'}) {
 }
 
 describe('failure and cache recovery', () => {
-    it('removes an old review-pack when preparation fails', () => {
+    it('removes an old run-local review-pack when preparation fails', () => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-stale-pack-'));
         fs.mkdirSync(path.join(root, 'data/base'), {recursive: true});
         fs.mkdirSync(path.join(root, 'data/work/review-packs'), {recursive: true});
@@ -35,6 +35,11 @@ describe('failure and cache recovery', () => {
             {lp: 1, institution_id: 'bank_a', stage: 'pending_prepare', attempt_count: 0}
         ]}));
         fs.writeFileSync(path.join(root, 'data/work/review-packs/lp-001.md'), 'stale pack');
+        const manifestPath = path.join(root, 'data/work/runs/run-current/manifest.json');
+        execFileSync(node, [path.join(skillRoot, 'tools/prepare-run.mjs'), '--run-id', 'run-current', '--limit', '1'], {
+            cwd: root, env: env(root), encoding: 'utf8'
+        });
+        fs.writeFileSync(path.join(root, 'data/work/runs/run-current/review-packs/lp-001.md'), 'stale run-local pack');
         fs.writeFileSync(path.join(root, 'data/cache/institutions/001-bank-a/candidates.json'), JSON.stringify({
             institution_id: 'bank_a', lp: 1, name: 'Bank A', run_id: 'run-current',
             candidates: [{url: 'https://bank-a.example/offer', final_url: 'https://bank-a.example/offer', cache_file: '/tmp/missing-bank-source.html', available: true, content_type: 'text/html', content_sha256: 'a'.repeat(64), content_length: 10}],
@@ -42,13 +47,15 @@ describe('failure and cache recovery', () => {
             sufficient_for_analysis: false
         }));
 
-        const output = execFileSync(node, [path.join(skillRoot, 'tools/prepare-batch.mjs'), '--limit', '1', '--skip-discovery'], {
+        const output = execFileSync(node, [path.join(skillRoot, 'tools/prepare-batch.mjs'), '--run-manifest', manifestPath, '--limit', '1', '--skip-discovery'], {
             cwd: root, env: env(root), encoding: 'utf8'
         });
         expect(output).toContain('"errors": 1');
-        expect(fs.existsSync(path.join(root, 'data/work/review-packs/lp-001.md'))).toBe(false);
-        const automation = JSON.parse(fs.readFileSync(path.join(root, 'data/work/automation-state.json'), 'utf8'));
+        expect(fs.existsSync(path.join(root, 'data/work/runs/run-current/review-packs/lp-001.md'))).toBe(false);
+        expect(fs.existsSync(path.join(root, 'data/work/review-packs/lp-001.md'))).toBe(true);
+        const automation = JSON.parse(fs.readFileSync(path.join(root, 'data/work/runs/run-current/automation-state.json'), 'utf8'));
         expect(automation.tasks[0].stage).toBe('error');
+        expect(JSON.parse(fs.readFileSync(path.join(root, 'data/work/automation-state.json'), 'utf8')).tasks[0].stage).toBe('pending_prepare');
     });
 
     it('refetches a corrupted cache instead of reusing it after 304', async () => {
@@ -73,7 +80,14 @@ describe('failure and cache recovery', () => {
             {lp: 1, institution_id: 'bank_a', type: 'bank_spoldzielczy', name: 'Bank A', website_url: `${base}/home`}
         ]}));
         try {
-            const args = [path.join(skillRoot, 'tools/discover-sources.mjs'), '--lp', '1', '--refresh', '--skip-unchanged', '--google-base-url', base];
+            const args = [
+                path.join(skillRoot, 'tools/discover-sources.mjs'),
+                '--lp', '1',
+                '--refresh',
+                '--skip-unchanged',
+                '--google-base-url', base,
+                '--ranking-provider', 'deterministic'
+            ];
             await execFileAsync(node, [...args, '--run-id', 'run-1'], {cwd: root, env: env(root), maxBuffer: 4 * 1024 * 1024});
             const cacheDir = path.join(root, 'data/cache/institutions/001-bank-a');
             const first = JSON.parse(fs.readFileSync(path.join(cacheDir, 'candidates.json'), 'utf8'));

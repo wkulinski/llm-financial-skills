@@ -49,13 +49,21 @@ function projectWithInstitution(root, websiteUrl, extra = {}) {
     }));
 }
 
-async function runDiscover(root, googleBaseUrl, extraArgs = []) {
+async function runDiscover(root, googleBaseUrl, extraArgs = [], {enableGoogleSearch = Boolean(googleBaseUrl)} = {}) {
+    const offlineProviderArgs = extraArgs.includes('--ranking-provider')
+        ? []
+        : ['--ranking-provider', 'deterministic'];
+    const googleArgs = googleBaseUrl ? [
+        '--google-base-url', googleBaseUrl,
+        ...(enableGoogleSearch ? ['--enable-google-search'] : [])
+    ] : [];
     const result = await execFileAsync(node, [
         discoverTool,
         '--lp', '1',
         '--refresh',
         '--skip-unchanged',
-        '--google-base-url', googleBaseUrl,
+        ...googleArgs,
+        ...offlineProviderArgs,
         ...extraArgs
     ], {
         cwd: root,
@@ -71,7 +79,34 @@ function readCandidates(root) {
 }
 
 describe('discover-sources search-first integration', () => {
-    it('uses search-first, respects the seed budget and skips homepage/sitemap', async () => {
+    it('skips external Google search by default even when a base URL is configured', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-no-google-'));
+        const requests = [];
+        let serverInfo;
+        serverInfo = await startServer((request, response) => {
+            const url = new URL(request.url, 'http://127.0.0.1');
+            requests.push(url.pathname);
+            if (url.pathname === '/homepage') return send(response, 200, `<a href="${serverInfo.baseUrl}/offer">Oferta mieszkaniowa</a>`);
+            if (url.pathname === '/offer') return send(response, 200, 'Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.');
+            if (url.pathname.startsWith('/sitemap')) return send(response, 404, 'not found');
+            if (url.pathname === '/search') return send(response, 500, 'Google must not be called');
+            return send(response, 404, 'not found');
+        });
+        try {
+            projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
+            await runDiscover(root, serverInfo.baseUrl, ['--url-ranking-deterministic'], {enableGoogleSearch: false});
+            const candidates = readCandidates(root);
+            expect(candidates.google_search_enabled).toBe(false);
+            expect(candidates.fallback_trigger_reason).toBe('google_search_disabled');
+            expect(candidates.discovery_mode).toBe('crawl_fallback');
+            expect(requests).not.toContain('/search');
+            expect(requests).toContain('/homepage');
+        } finally {
+            await stopServer(serverInfo.server);
+        }
+    });
+
+    it('uses search-first, respects the seed budget and retains the full search inventory', async () => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-'));
         const requests = [];
         const serverInfo = await startServer((request, response) => {
@@ -90,20 +125,107 @@ describe('discover-sources search-first integration', () => {
         });
         try {
             projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
-            const output = await runDiscover(root, serverInfo.baseUrl, ['--seed-max', '8']);
+            const output = await runDiscover(root, serverInfo.baseUrl, ['--seed-max', '1', '--run-id', 'run-stage4-search']);
             const candidates = readCandidates(root);
             expect(output).toContain('search_first');
             expect(candidates.discovery_mode).toBe('search_first');
+            expect(candidates.run_id).toBe('run-stage4-search');
             expect(candidates.search_provider_status).toBe('ok');
-            expect(candidates.selected_seed_urls).toHaveLength(2);
-            expect(candidates.candidates).toHaveLength(2);
+            expect(candidates.selected_seed_urls).toHaveLength(1);
+            expect(candidates.candidates).toHaveLength(1);
             expect(candidates.all_candidates).toHaveLength(2);
+            expect(candidates.all_candidates.map(candidate => candidate.url)).toEqual(expect.arrayContaining([
+                `${serverInfo.baseUrl}/offer-one`,
+                `${serverInfo.baseUrl}/offer-two`
+            ]));
             expect(candidates.timings_ms.total).toBeGreaterThanOrEqual(0);
             expect(candidates.fetch_counts.search_results).toBeGreaterThan(0);
-            expect(candidates.fetch_counts.seed_urls).toBe(2);
+            expect(candidates.fetch_counts.seed_urls).toBe(1);
+            expect(candidates.early_stop_reason).toBe('single_product_page_complete_criteria');
+            expect(candidates.url_ranking).toMatchObject({
+                provider: 'deterministic',
+                mode: 'automatic_after_discovery',
+                candidate_count: 2,
+                selected_pool: expect.any(Array)
+            });
+            const manifest = JSON.parse(fs.readFileSync(candidates.url_ranking.manifest_path, 'utf8'));
+            const ranking = JSON.parse(fs.readFileSync(candidates.url_ranking.ranking_path, 'utf8'));
+            const validation = JSON.parse(fs.readFileSync(candidates.url_ranking.validation_report_path, 'utf8'));
+            const selection = JSON.parse(fs.readFileSync(candidates.url_ranking.selection_report_path, 'utf8'));
+            expect(manifest.run_id).toBe(candidates.run_id);
+            expect(ranking.run_id).toBe(candidates.run_id);
+            expect(validation.run_id).toBe(candidates.run_id);
+            expect(selection.run_id).toBe(candidates.run_id);
+            expect(manifest.candidates).toHaveLength(2);
+            expect(fs.existsSync(candidates.url_ranking.raw_response_path)).toBe(true);
+            expect(fs.existsSync(candidates.url_ranking.ranking_path)).toBe(true);
+            expect(fs.existsSync(candidates.url_ranking.validation_report_path)).toBe(true);
+            expect(fs.existsSync(candidates.url_ranking.selection_report_path)).toBe(true);
+            expect(requests).toContain('/offer-one');
+            expect(requests).not.toContain('/offer-two');
             expect(requests.filter(pathname => pathname === '/search')).toHaveLength(3);
             expect(requests).not.toContain('/homepage');
             expect(requests).not.toContain('/sitemap.xml');
+        } finally {
+            await stopServer(serverInfo.server);
+        }
+    }, 15000);
+
+    it('runs the automatic provider after search-first without the legacy enable flag', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-auto-ranking-'));
+        let serverInfo;
+        serverInfo = await startServer((request, response) => {
+            const url = new URL(request.url, 'http://127.0.0.1');
+            if (url.pathname === '/search') return send(response, 200, googleHtml([
+                `${serverInfo.baseUrl}/offer`
+            ]));
+            if (url.pathname === '/offer') return send(response, 200, 'Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.');
+            return send(response, 404, 'not found');
+        });
+        try {
+            projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
+            await runDiscover(root, serverInfo.baseUrl, ['--ranking-provider', 'auto', '--ranking-timeout-ms', '25']);
+            const candidates = readCandidates(root);
+            expect(candidates.discovery_mode).toBe('search_first');
+            expect(candidates.url_ranking).toMatchObject({
+                mode: 'automatic_after_discovery',
+                candidate_count: 1
+            });
+            expect(['opencode', 'deterministic', 'deterministic_fast_path', 'deterministic_fallback', 'deterministic_after_validation_error', 'deterministic_budget_exhausted'])
+                .toContain(candidates.url_ranking.provider);
+        } finally {
+            await stopServer(serverInfo.server);
+        }
+    }, 15000);
+
+    it('passes un-fetched search results and crawl results into the fallback ranking inventory', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-inventory-'));
+        let serverInfo;
+        serverInfo = await startServer((request, response) => {
+            const url = new URL(request.url, 'http://127.0.0.1');
+            if (url.pathname === '/search') return send(response, 200, googleHtml([
+                `${serverInfo.baseUrl}/search-offer`,
+                `${serverInfo.baseUrl}/search-unfetched`
+            ]));
+            if (url.pathname === '/search-offer') return send(response, 200, 'Kredyt hipoteczny.');
+            if (url.pathname === '/search-unfetched') return send(response, 200, 'Neutralna strona informacyjna.');
+            if (url.pathname === '/homepage') return send(response, 200, `<a href="${serverInfo.baseUrl}/crawl-offer">Kredyt mieszkaniowy refinansowanie stała stopa</a>`);
+            if (url.pathname === '/crawl-offer') return send(response, 200, 'Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.');
+            return send(response, 404, 'not found');
+        });
+        try {
+            projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
+            await runDiscover(root, serverInfo.baseUrl, ['--seed-max', '1', '--url-ranking-deterministic']);
+            const candidates = readCandidates(root);
+            const manifest = JSON.parse(fs.readFileSync(candidates.url_ranking.manifest_path, 'utf8'));
+            const manifestUrls = manifest.candidates.map(candidate => candidate.url);
+
+            expect(candidates.discovery_mode).toBe('crawl_fallback');
+            expect(manifestUrls).toEqual(expect.arrayContaining([
+                `${serverInfo.baseUrl}/search-unfetched`,
+                `${serverInfo.baseUrl}/crawl-offer`
+            ]));
+            expect(candidates.all_candidates.map(candidate => candidate.url)).toEqual(expect.arrayContaining(manifestUrls));
         } finally {
             await stopServer(serverInfo.server);
         }
@@ -216,9 +338,88 @@ describe('discover-sources search-first integration', () => {
             const fetchedCandidateRequests = requests.filter(pathname => /^\/candidate-\d+$/.test(pathname));
             expect(candidates.discovery_mode).toBe('crawl_fallback');
             expect(candidates.url_ranking.provider).toBe('deterministic');
+            expect(candidates.url_ranking.mode).toBe('automatic_after_discovery');
+            expect(candidates.url_ranking.selection_report_path).toBeTruthy();
             expect(candidates.all_candidates).toHaveLength(20);
             expect(fetchedCandidateRequests.length).toBeLessThanOrEqual(16);
             expect(fetchedCandidateRequests.length).toBeLessThan(20);
+        } finally {
+            await stopServer(serverInfo.server);
+        }
+    }, 15000);
+
+    it('expands the validated ranking when the initial pool misses evidence categories', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-expansion-'));
+        const requests = [];
+        let serverInfo;
+        const links = Array.from({length: 20}, (_, index) =>
+            `<a href="__BASE__/candidate-${String(index + 1).padStart(2, '0')}">Kredyt mieszkaniowy refinansowanie stała stopa</a>`
+        ).join('');
+        serverInfo = await startServer((request, response) => {
+            const url = new URL(request.url, 'http://127.0.0.1');
+            requests.push(url.pathname);
+            if (url.pathname === '/search') return send(response, 503, 'temporary failure');
+            if (url.pathname === '/homepage') return send(response, 200, links.replaceAll('__BASE__', serverInfo.baseUrl));
+            if (/^\/candidate-\d+$/.test(url.pathname)) {
+                const number = Number(url.pathname.replace('/candidate-', ''));
+                return send(response, 200, number >= 17
+                    ? 'Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.'
+                    : 'Kredyt hipoteczny.');
+            }
+            return send(response, 404, 'not found');
+        });
+        try {
+            projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
+            await runDiscover(root, serverInfo.baseUrl, ['--url-ranking-deterministic']);
+            const candidates = readCandidates(root);
+            const fetchedCandidateRequests = requests.filter(pathname => /^\/candidate-\d+$/.test(pathname));
+
+            expect(candidates.sufficient_for_analysis).toBe(true);
+            expect(candidates.url_ranking.expanded_pools).toHaveLength(1);
+            expect(candidates.url_ranking.expansion_reasons[0].missing_categories)
+                .toEqual(expect.arrayContaining(['refinancing', 'fixed_rate']));
+            expect(fetchedCandidateRequests).toHaveLength(20);
+            expect(candidates.content_check.missing_categories).toEqual([]);
+            const selection = JSON.parse(fs.readFileSync(candidates.url_ranking.selection_report_path, 'utf8'));
+            expect(selection.expanded_pools).toHaveLength(1);
+            expect(selection.fetched_urls).toHaveLength(20);
+        } finally {
+            await stopServer(serverInfo.server);
+        }
+    }, 15000);
+
+    it('stops adaptive expansion after one additional pool instead of exhausting the ranking', async () => {
+        const root = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-discovery-expansion-limit-'));
+        const requests = [];
+        let serverInfo;
+        const links = Array.from({length: 40}, (_, index) =>
+            `<a href="__BASE__/candidate-${String(index + 1).padStart(2, '0')}">Kredyt mieszkaniowy refinansowanie stała stopa</a>`
+        ).join('');
+        serverInfo = await startServer((request, response) => {
+            const url = new URL(request.url, 'http://127.0.0.1');
+            requests.push(url.pathname);
+            if (url.pathname === '/search') return send(response, 503, 'temporary failure');
+            if (url.pathname === '/homepage') return send(response, 200, links.replaceAll('__BASE__', serverInfo.baseUrl));
+            if (/^\/candidate-\d+$/.test(url.pathname)) {
+                const number = Number(url.pathname.replace('/candidate-', ''));
+                return send(response, 200, number >= 25
+                    ? 'Kredyt hipoteczny. Refinansowanie kredytu. Stała stopa przez 5 lat.'
+                    : 'Kredyt hipoteczny.');
+            }
+            return send(response, 404, 'not found');
+        });
+        try {
+            projectWithInstitution(root, `${serverInfo.baseUrl}/homepage`);
+            await runDiscover(root, serverInfo.baseUrl, ['--url-ranking-deterministic']);
+            const candidates = readCandidates(root);
+            const fetchedCandidateRequests = requests.filter(pathname => /^\/candidate-\d+$/.test(pathname));
+
+            expect(candidates.url_ranking.max_additional_pools).toBe(1);
+            expect(candidates.url_ranking.expanded_pools).toHaveLength(1);
+            expect(candidates.url_ranking.expansion_stop_reason).toBe('max_additional_pools_reached');
+            expect(fetchedCandidateRequests).toHaveLength(24);
+            expect(candidates.all_candidates).toHaveLength(40);
+            expect(candidates.sufficient_for_analysis).toBe(false);
         } finally {
             await stopServer(serverInfo.server);
         }
@@ -238,7 +439,11 @@ describe('discover-sources search-first integration', () => {
             if (url.pathname === '/canonical-home') {
                 return send(response, 200, `<a href="http://localhost:${serverInfo.port}/fallback-offer">Oferta kredyt hipoteczny</a>`);
             }
-            if (url.pathname === '/fallback-offer') return send(response, 200, '<html><body>fallback offer</body></html>');
+            if (url.pathname === '/fallback-offer') {
+                response.writeHead(302, {location: `http://localhost:${serverInfo.port}/canonical-offer`});
+                return response.end();
+            }
+            if (url.pathname === '/canonical-offer') return send(response, 200, '<html><body>fallback offer</body></html>');
             if (url.pathname.startsWith('/sitemap')) return send(response, 404, 'not found');
             return send(response, 404, 'not found');
         });
@@ -248,6 +453,9 @@ describe('discover-sources search-first integration', () => {
             const candidates = readCandidates(root);
             expect(candidates.discovery_mode).toBe('crawl_fallback');
             expect(candidates.all_candidates.some(candidate => candidate.url === `http://localhost:${serverInfo.port}/fallback-offer`)).toBe(true);
+            expect(candidates.cache_integrity_errors.some(error =>
+                ['content_hash_mismatch', 'content_length_mismatch'].includes(error.type)
+            )).toBe(false);
             expect(requests).toContainEqual({host: `localhost:${serverInfo.port}`, pathname: '/canonical-home'});
         } finally {
             await stopServer(serverInfo.server);
@@ -315,6 +523,12 @@ describe('discover-sources search-first integration', () => {
             await runDiscover(root, bank.baseUrl, ['--allow-external']);
             const candidates = readCandidates(root);
             expect(candidates.all_candidates.map(candidate => candidate.url)).not.toContain(`http://localhost:${docs.port}/document.html`);
+            expect(candidates.url_ranking).toMatchObject({
+                provider: 'not_run_empty_inventory',
+                mode: 'automatic_after_discovery',
+                candidate_count: 0,
+                selection_report_path: null
+            });
         } finally {
             await stopServer(bank.server);
             await stopServer(docs.server);

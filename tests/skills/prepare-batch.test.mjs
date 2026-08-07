@@ -22,7 +22,7 @@ function readJson(file) {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function writeProjectState(cwd, baseUrl) {
+function writeProjectState(cwd, baseUrl, {stage = 'pending_prepare'} = {}) {
     fs.mkdirSync(path.join(cwd, 'data/base'), {recursive: true});
     fs.mkdirSync(path.join(cwd, 'data/work'), {recursive: true});
     fs.writeFileSync(path.join(cwd, 'data/base/institutions.current.json'), JSON.stringify({
@@ -45,7 +45,7 @@ function writeProjectState(cwd, baseUrl) {
         tasks: [{
             lp: 1,
             institution_id: 'bank_a',
-            stage: 'pending_prepare',
+            stage,
             attempt_count: 0,
             preprocessing_risk_flags: [],
             last_error: null,
@@ -54,7 +54,7 @@ function writeProjectState(cwd, baseUrl) {
     }));
 }
 
-function writeCandidateCache(cwd, {baseUrl, html, sufficientForAnalysis}) {
+function writeCandidateCache(cwd, {baseUrl, html, sufficientForAnalysis, urlRanking = null}) {
     const cacheDir = path.join(cwd, 'data/cache/institutions/001-bank-a');
     fs.mkdirSync(cacheDir, {recursive: true});
     const htmlPath = path.join(cacheDir, 'offer.html');
@@ -85,6 +85,7 @@ function writeCandidateCache(cwd, {baseUrl, html, sufficientForAnalysis}) {
         product_relation: {status: 'unknown'},
         preprocessing_risk_flags: [],
         homepage_changed_since_last_fetch: true,
+        url_ranking: urlRanking,
         candidates: [candidate],
         all_candidates: [candidate]
     }));
@@ -223,18 +224,22 @@ describe('prepare-batch', () => {
             encoding: 'utf8',
             env: toolEnv(cwd)
         });
-        expect(summary).toContain('"processed": 1');
-        expect(summary).toContain('"stage": "prepared"');
+        const result = JSON.parse(summary);
+        expect(result.processed).toBe(1);
+        expect(result.items[0].stage).toBe('prepared');
 
-        const automation = readJson(path.join(cwd, 'data/work/automation-state.json'));
-        expect(automation.tasks[0].stage).toBe('prepared');
-        expect(automation.tasks[0].attempt_count).toBe(1);
-        expect(fs.existsSync(path.join(cwd, 'data/work/review-packs/lp-001.md'))).toBe(true);
+        const runDir = path.join(cwd, 'data/work/runs', result.run_id);
+        const runAutomation = readJson(path.join(runDir, 'automation-state.json'));
+        expect(runAutomation.tasks[0].stage).toBe('prepared');
+        expect(runAutomation.tasks[0].attempt_count).toBe(1);
+        expect(readJson(path.join(cwd, 'data/work/automation-state.json')).tasks[0].stage).toBe('pending_prepare');
+        expect(fs.existsSync(path.join(runDir, 'review-packs/lp-001.md'))).toBe(true);
+        expect(fs.existsSync(path.join(runDir, 'row-updates/lp-001.json'))).toBe(false);
         const sourceText = fs.readFileSync(path.join(cacheDir, 'source-text.jsonl'), 'utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
         expect(sourceText[0].discovery_mode).toBe('search_first');
         expect(sourceText[0].sufficient_for_analysis).toBe(true);
         expect(sourceText[0].source).toBe('homepage');
-        const reviewPack = fs.readFileSync(path.join(cwd, 'data/work/review-packs/lp-001.md'), 'utf8');
+        const reviewPack = fs.readFileSync(path.join(runDir, 'review-packs/lp-001.md'), 'utf8');
         expect(reviewPack).toContain('Tryb discovery: search_first');
         expect(reviewPack).toContain('Relacja produktu: confirmed');
         const candidates = readJson(path.join(cwd, 'data/cache/institutions/001-bank-a/candidates.json'));
@@ -257,9 +262,10 @@ describe('prepare-batch', () => {
             encoding: 'utf8',
             env: toolEnv(cwd)
         });
-        expect(summary).toContain('"stage": "retry_pending"');
+        const result = JSON.parse(summary);
+        expect(result.items[0].stage).toBe('retry_pending');
 
-        const task = readJson(path.join(cwd, 'data/work/automation-state.json')).tasks[0];
+        const task = readJson(path.join(cwd, 'data/work/runs', result.run_id, 'automation-state.json')).tasks[0];
         expect(task.stage).toBe('retry_pending');
         expect(task.preprocessing_status).toBe('insufficient');
         expect(task.preprocessing_technical_flags).toEqual([]);
@@ -282,6 +288,8 @@ describe('prepare-batch', () => {
                 '--lp', '1',
                 '--refresh',
                 '--skip-unchanged',
+                '--ranking-provider', 'deterministic',
+                '--enable-google-search',
                 '--google-base-url', serverInfo.baseUrl
             ], {
                 cwd,
@@ -294,13 +302,14 @@ describe('prepare-batch', () => {
             expect(candidates.sufficient_for_analysis).toBe(true);
             expect(candidates.discovery_mode).toBe('search_first');
 
-            await execFileAsync(node, [path.join(skillRoot, 'tools/prepare-batch.mjs'), '--limit', '1', '--skip-discovery'], {
+            const prepareResult = await execFileAsync(node, [path.join(skillRoot, 'tools/prepare-batch.mjs'), '--limit', '1', '--skip-discovery'], {
                 cwd,
                 encoding: 'utf8',
                 maxBuffer: 4 * 1024 * 1024,
                 env: toolEnv(cwd)
             });
-            const task = readJson(path.join(cwd, 'data/work/automation-state.json')).tasks[0];
+            const runResult = JSON.parse(prepareResult.stdout);
+            const task = readJson(path.join(cwd, 'data/work/runs', runResult.run_id, 'automation-state.json')).tasks[0];
             expect(task.stage).toBe('prepared');
             expect(task.preprocessing_status).toBe('sufficient');
         } finally {
@@ -333,7 +342,9 @@ describe('prepare-batch', () => {
                 '--mode', 'changed-only',
                 '--refresh',
                 '--limit', String(limit),
-                '--google-base-url', serverInfo.baseUrl
+                '--google-base-url', serverInfo.baseUrl,
+                '--enable-google-search',
+                '--ranking-provider', 'deterministic'
             ], {
                 cwd,
                 encoding: 'utf8',
@@ -347,11 +358,14 @@ describe('prepare-batch', () => {
             expect(first.refresh_manifest_status).toBe('complete');
 
             state.searchVariant = 'B';
+            const requestsBeforeLightweight = requests.length;
             const second = JSON.parse((await run(1)).stdout);
+            expect(requests.slice(requestsBeforeLightweight).map(request => request.path)).not.toContain('/search');
+            expect(requests.slice(requestsBeforeLightweight).map(request => request.path)).not.toContain('/homepage');
             expect(second.unchanged_sources).toBe(1);
-            expect(readJson(path.join(cwd, 'data/work/automation-state.json')).tasks[0].stage).toBe('unchanged_sources');
+            expect(readJson(path.join(cwd, 'data/work/runs', second.run_id, 'automation-state.json')).tasks[0].stage).toBe('unchanged_sources');
             const secondCandidates = readJson(path.join(cwd, 'data/cache/institutions/001-bank-a/candidates.json'));
-            expect(secondCandidates.discovery_changed_since_last_fetch).toBe(true);
+            expect(secondCandidates.discovery_changed_since_last_fetch).toBe(false);
             expect(secondCandidates.offer_changed_since_last_fetch).toBe(false);
             expect(secondCandidates.candidates.some(candidate => candidate.conditional_304 === true)).toBe(true);
             const secondMaterialHash = secondCandidates.candidates[0].material_sha256;
@@ -372,9 +386,52 @@ describe('prepare-batch', () => {
             expect(fourth.prepared).toBe(1);
             const fourthCandidates = readJson(path.join(cwd, 'data/cache/institutions/001-bank-a/candidates.json'));
             expect(fourthCandidates.offer_changed_since_last_fetch).toBe(true);
+            expect(fourthCandidates.url_ranking.provider).toBe('not_run_lightweight_refresh');
             expect(requests.some(request => request.path === '/offer' && request.headers['if-none-match'] === 'v1')).toBe(true);
         } finally {
             await stopServer(serverInfo.server);
         }
     }, 30_000);
+
+    it('resumes an interrupted preparing task and records ranking metadata for the queue', () => {
+        const cwd = makeTempDir();
+        const baseUrl = 'https://bank-a.example';
+        writeProjectState(cwd, baseUrl, {stage: 'preparing'});
+        writeCandidateCache(cwd, {
+            baseUrl,
+            html: '<html><body>Kredyt mieszkaniowy. Refinansowanie kredytu. Oprocentowanie okresowo stałe.</body></html>',
+            sufficientForAnalysis: true,
+            urlRanking: {
+                provider: 'deterministic_fallback',
+                mode: 'automatic_after_discovery',
+                inventory_sha256: 'inventory-hash',
+                candidate_count: 4,
+                model_candidate_count: 3,
+                locked_noise_count: 1,
+                selected_pool: [`${baseUrl}/offer`],
+                expanded_pools: [[`${baseUrl}/extra`]],
+                fallback_reason: 'opencode_error'
+            }
+        });
+
+        const summary = execFileSync(node, [
+            path.join(skillRoot, 'tools/prepare-batch.mjs'),
+            '--limit', '1',
+            '--skip-discovery'
+        ], {cwd, encoding: 'utf8', env: toolEnv(cwd)});
+        const result = JSON.parse(summary);
+        expect(result.items[0].url_ranking_provider).toBe('deterministic_fallback');
+
+        const task = readJson(path.join(cwd, 'data/work/runs', result.run_id, 'automation-state.json')).tasks[0];
+        expect(task.stage).toBe('prepared');
+        expect(task.run_id).toMatch(/^run-/);
+        expect(task.url_ranking).toMatchObject({
+            provider: 'deterministic_fallback',
+            inventory_sha256: 'inventory-hash',
+            candidate_count: 4,
+            selected_pool_count: 1,
+            expanded_pool_count: 1,
+            fallback_reason: 'opencode_error'
+        });
+    });
 });

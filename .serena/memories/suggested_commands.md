@@ -1,0 +1,1 @@
+Root: `npm test` runs Vitest; `npm test -- --runInBand` is not a project convention. Bank scan: `npm --prefix .agents/skills/bank-market-scan run check` runs Node syntax checks; module scripts are invoked with `node .agents/skills/bank-market-scan/tools/<name>.mjs`. Use `git status --short` before/after work. Do not overwrite existing user changes in the worktree.

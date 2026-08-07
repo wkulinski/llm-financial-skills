@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "scenario": "search_first",
+  "institution": {
+    "lp": 1,
+    "institution_id": "bank_fixture_search",
+    "name": "Bank Fixture Search",
+    "website_url": "https://bank.example/"
+  },
+  "search": {
+    "provider_status": "ok",
+    "results": [
+      {
+        "url": "https://bank.example/kredyt-mieszkaniowy",
+        "title": "Kredyt mieszkaniowy",
+        "snippet": "Kredyt hipoteczny z oprocentowaniem okresowo stałym.",
+        "query": "kredyt mieszkaniowy",
+        "search_rank": 1
+      },
+      {
+        "url": "https://bank.example/tabela-oprocentowania.pdf",
+        "title": "Tabela oprocentowania",
+        "snippet": "Oprocentowanie kredytów mieszkaniowych.",
+        "query": "oprocentowanie okresowo stałe",
+        "search_rank": 1
+      }
+    ]
+  },
+  "pages": [
+    {
+      "url": "https://bank.example/kredyt-mieszkaniowy",
+      "content_type": "text/html",
+      "body": "Kredyt mieszkaniowy. Refinansowanie kredytu mieszkaniowego. Oprocentowanie okresowo stałe przez 5 lat."
+    },
+    {
+      "url": "https://bank.example/tabela-oprocentowania.pdf",
+      "content_type": "application/pdf",
+      "body": "fixture placeholder for a cached PDF response"
+    }
+  ],
+  "expected": {
+    "discovery_mode": "search_first",
+    "crawl_fallback": false,
+    "all_candidates": 2,
+    "selected_seed_urls": 2
+  }
+}

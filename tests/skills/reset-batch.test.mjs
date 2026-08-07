@@ -23,7 +23,7 @@ function makeProject() {
         {lp: 2, institution_id: 'bank_b', review_status: 'checked', qualifies: false}
     ]}));
     fs.writeFileSync(path.join(root, 'data/work/automation-state.json'), JSON.stringify({tasks: [
-        {lp: 1, institution_id: 'bank_a', stage: 'prepared', attempt_count: 4},
+        {lp: 1, institution_id: 'bank_a', stage: 'prepared', attempt_count: 4, url_ranking: {provider: 'opencode'}},
         {lp: 2, institution_id: 'bank_b', stage: 'checked', attempt_count: 2}
     ]}));
     fs.writeFileSync(path.join(root, 'data/work/evidence.jsonl'), `${JSON.stringify({lp: 1, institution_id: 'bank_a', text: 'old'})}\n${JSON.stringify({lp: 2, institution_id: 'bank_b', text: 'keep'})}\n`);
@@ -49,6 +49,7 @@ describe('reset-batch', () => {
         expect(state.rows[0].offer).toEqual({});
         expect(state.rows[1].review_status).toBe('checked');
         expect(automation.tasks[0]).toMatchObject({stage: 'pending_prepare', attempt_count: 0, run_id: 'test-reset'});
+        expect(automation.tasks[0].url_ranking).toBeNull();
         expect(automation.tasks[1].stage).toBe('checked');
         expect(fs.existsSync(path.join(root, 'data/cache/institutions/001-bank-a'))).toBe(false);
         expect(fs.existsSync(path.join(root, 'data/cache/institutions/002-bank-b/keep.html'))).toBe(true);

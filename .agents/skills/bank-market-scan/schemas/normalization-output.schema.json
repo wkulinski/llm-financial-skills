@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Morfeusz normalization artifact",
+  "type": "object",
+  "required": ["schema_version", "engine", "status", "sources", "keywords"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": ["string", "null"]},
+    "institution_id": {"type": ["string", "null"]},
+    "lp": {"type": ["integer", "null"]},
+    "engine": {"const": "morfeusz2"},
+    "status": {"const": "complete"},
+    "generated_at": {"type": "string"},
+    "source_count": {"type": "integer", "minimum": 0},
+    "normalized_source_count": {"type": "integer", "minimum": 0},
+    "unreadable_source_count": {"type": "integer", "minimum": 0},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "source_text_sha256", "status", "tokens"],
+        "properties": {
+          "url": {"type": ["string", "null"]},
+          "content_sha256": {"type": ["string", "null"]},
+          "source_text_sha256": {"type": "string"},
+          "status": {"enum": ["normalized", "unreadable"]},
+          "error": {"type": ["string", "null"]},
+          "lemma_text": {"type": "string"},
+          "tokens": {"type": "array"}
+        }
+      }
+    },
+    "keywords": {"type": "object"}
+  }
+}

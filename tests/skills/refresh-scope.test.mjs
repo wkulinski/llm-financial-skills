@@ -49,7 +49,7 @@ describe('prepare-batch refresh scope', () => {
         try {
             await execFileAsync(node, [
                 path.join(skillRoot, 'tools/prepare-batch.mjs'), '--from', '1', '--limit', '1', '--refresh', '--continue-on-error',
-                '--google-base-url', base
+                '--google-base-url', base, '--ranking-provider', 'deterministic'
             ], {cwd: root, env: {...process.env, BANK_MARKET_SCAN_PROJECT_ROOT: root}, maxBuffer: 4 * 1024 * 1024});
             expect(requests).toContain('/bank1');
             expect(requests).not.toContain('/bank2');

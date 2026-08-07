@@ -1,7 +1,34 @@
 import {todayIso} from './common.mjs';
 
 export function markTask(task, patch) {
+    if (!task || typeof task !== 'object') throw new TypeError('automation task is required');
     Object.assign(task, patch, {last_processed_at: todayIso()});
+}
+
+export function ensureTask(automation, institution, runId) {
+    if (!automation || typeof automation !== 'object') throw new TypeError('automation state is required');
+    if (!Array.isArray(automation.tasks)) automation.tasks = [];
+    let task = automation.tasks.find(item => item.institution_id === institution.institution_id);
+    if (!task) {
+        task = {
+            lp: institution.lp,
+            institution_id: institution.institution_id,
+            stage: 'pending_prepare',
+            attempt_count: 0,
+            preprocessing_status: 'pending',
+            preprocessing_risk_flags: [],
+            preprocessing_technical_flags: [],
+            preprocessing_insufficient_flags: [],
+            preprocessing_quality_warnings: [],
+            last_error: null,
+            last_processed_at: null,
+            url_ranking: null
+        };
+        automation.tasks.push(task);
+    }
+    task.lp = institution.lp;
+    task.run_id = runId;
+    return task;
 }
 
 function sourceRowsForAssessment(candidates, sourceRows) {

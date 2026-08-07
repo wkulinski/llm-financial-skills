@@ -9,6 +9,9 @@
         "build-list": "node tools/build-institution-list.mjs",
         "next": "node tools/next-batch.mjs",
         "prepare-batch": "node tools/prepare-batch.mjs",
+        "prepare-run": "node tools/prepare-run.mjs",
+        "finalize-run": "node tools/finalize-run.mjs",
+        "abort-run": "node tools/abort-run.mjs",
         "review-batch": "node tools/review-batch.mjs",
         "retry-batch": "node tools/retry-batch.mjs",
         "review-manifest": "node tools/review-manifest.mjs",
@@ -17,11 +20,15 @@
         "validate-url-ranking": "node tools/validate-url-ranking.mjs",
         "expand-url-ranking": "node tools/expand-url-ranking.mjs",
         "pack": "node tools/prepare-review-pack.mjs",
+        "normalize": "node tools/normalize-text.mjs",
+        "review-context": "node tools/read-review-context.mjs",
+        "reconcile": "node tools/reconcile-state.mjs",
         "apply": "node tools/apply-row-update.mjs",
         "validate": "node tools/validate-state.mjs",
         "export": "node tools/export-workbook.mjs",
         "progress": "node tools/progress-report.mjs",
         "queue": "node tools/queue-report.mjs",
+        "benchmark-content": "node tools/benchmark-content-pipeline.mjs",
         "check": "node --check tools/*.mjs tools/lib/*.mjs",
         "audit": "node tools/audit-report.mjs"
     },
@@ -37,8 +44,6 @@
     },
     "engines": {
         "node": ">=20"
-    },
-    "devDependencies": {
     },
     "overrides": {
         "uuid": "^11.1.1"

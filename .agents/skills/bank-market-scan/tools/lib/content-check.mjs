@@ -1,10 +1,34 @@
 import fs from 'node:fs/promises';
-import * as cheerio from 'cheerio';
 import {findAllNormalizedSnippets, normalizeText} from './common.mjs';
 import {normalizeMaterial} from './material.mjs';
 import {isCriticalSourceCandidate, sourceBufferIntegrityErrors} from './source-integrity.mjs';
+import {findLemmaMatch, prepareMorphology} from './morphology.mjs';
+import {buildProductBundles, evaluateProductBundles} from './product-bundles.mjs';
+import {classifySourceRole} from './source-roles.mjs';
 
 const COVERAGE_CATEGORIES = ['product', 'refinancing', 'fixed_rate'];
+
+export function classifyRefinancingContext(material = {}, excerpt = '') {
+    const pageIdentity = normalizeText(`${material.url} ${material.title}`);
+    const context = normalizeText(`${material.title} ${excerpt}`);
+    if (/fundusz[- ]wsparcia|wsparcie[- ]kredytobiorc|zalegl|restrukturyzacj|windykacj|wakacj kredytow/.test(`${pageIdentity} ${context}`)) {
+        return 'existing_debt_support';
+    }
+    if (/wsp[oó]lnot|dewelop|firm|biznes|przedsięb|działalnoś/.test(`${pageIdentity} ${context}`)) {
+        return 'community_or_business_loan';
+    }
+    if (/refinansowan\w* koszt\w*|zwrot\w* wydatk\w*|wlasnych wydatk\w*|poniesion\w* koszt\w*/.test(context)) {
+        return 'refinance_of_own_housing_expenses';
+    }
+    if (/konsolidacj/.test(context) && !/spłat\w* kredyt\w* mieszk|kredyt\w* hipotecz/.test(context)) {
+        return 'consolidation_ambiguous';
+    }
+    if (/refinansowan|splat\w* (?:wczesniejsz|inn|obecn|kredyt\w*)/.test(context)
+        && /kredyt\w* (?:mieszk|hipotecz)|mieszkaniow|hipotecz/.test(context)) {
+        return 'commercial_refinance_of_mortgage';
+    }
+    return null;
+}
 
 function canonicalUrl(value, baseUrl = null) {
     try {
@@ -21,60 +45,88 @@ function canonicalUrl(value, baseUrl = null) {
 
 async function readMaterial(candidate) {
     if (!candidate.cache_file || candidate.available === false) {
-        return {readable: false, text: '', links: [], error: candidate.error || 'source_unavailable'};
+        return {readable: false, text: '', links: [], cache_file: candidate.cache_file || null, error: candidate.error || 'source_unavailable'};
     }
     try {
         const buffer = await fs.readFile(candidate.cache_file);
         const integrityErrors = sourceBufferIntegrityErrors(candidate, buffer);
         if (integrityErrors.length) {
-            return {readable: false, text: '', links: [], error: integrityErrors.join(',')};
+            return {readable: false, text: '', links: [], cache_file: candidate.cache_file, error: integrityErrors.join(',')};
         }
         const material = await normalizeMaterial(buffer, {
             contentType: candidate.content_type || '',
             fileName: candidate.cache_file
         });
         if (/\.pdf$/i.test(candidate.cache_file) || /pdf/i.test(candidate.content_type || '')) {
-            return {readable: Boolean(material.text), text: material.text, links: []};
+            return {readable: Boolean(material.text), text: material.text, links: material.links || [], cache_file: candidate.cache_file, error: null};
         }
-        const html = buffer.toString('utf8');
-        const $ = cheerio.load(html);
-        const links = $('a[href]').toArray()
-            .map(anchor => canonicalUrl($(anchor).attr('href'), candidate.final_url || candidate.url))
+        const links = (material.links || [])
+            .map(href => canonicalUrl(href, candidate.final_url || candidate.url))
             .filter(Boolean);
-        return {readable: Boolean(material.text), text: material.text, links};
+        return {readable: Boolean(material.text), text: material.text, links, cache_file: candidate.cache_file, error: null};
     } catch (error) {
-        return {readable: false, text: '', links: [], error: error.message};
+        return {readable: false, text: '', links: [], cache_file: candidate.cache_file || null, error: error.message};
     }
 }
 
-function categorySummary(materials, keywordGroups, category) {
+function categorySummary(materials, keywordGroups, category, morphology) {
     const matches = [];
     const urls = [];
+    const contextFlags = [];
     let readableSources = 0;
     for (const material of materials) {
         if (material.readable) readableSources += 1;
         const keywords = keywordGroups[category] || [];
-        const sourceMatches = keywords.flatMap(keyword => findAllNormalizedSnippets(material.text, keyword, 550, 20).map(snippet => ({
-            keyword,
-            source_start: snippet.source_start,
-            text_excerpt: snippet.text_excerpt
-        })));
+        const sourceMatches = keywords.flatMap((keyword, keywordIndex) => {
+            const surfaceMatches = findAllNormalizedSnippets(material.text, keyword, 550, 20)
+                .map(snippet => {
+                    const contextClass = category === 'refinancing' ? classifyRefinancingContext(material, snippet.text_excerpt) : null;
+                    if (contextClass) contextFlags.push({url: material.url, reason: contextClass});
+                    return {
+                    keyword,
+                    match_type: 'surface',
+                    context_class: contextClass,
+                    source_start: snippet.source_start,
+                    text_excerpt: snippet.text_excerpt
+                    };
+                });
+            const lemmaMatch = findLemmaMatch(material, morphology, category, keywordIndex);
+            if (!lemmaMatch) return surfaceMatches;
+            const contextClass = category === 'refinancing' ? classifyRefinancingContext(material, lemmaMatch.text_excerpt) : null;
+            if (contextClass) contextFlags.push({url: material.url, reason: contextClass});
+            return [...surfaceMatches, {
+                    keyword,
+                    match_type: 'lemma',
+                    context_class: contextClass,
+                    source_start: lemmaMatch.source_start,
+                    text_excerpt: lemmaMatch.text_excerpt
+                }];
+        });
         if (sourceMatches.length) {
             urls.push(material.url);
             matches.push(...sourceMatches);
         }
     }
+    // Recompute at material level so an excluded context cannot satisfy the criterion.
+    const eligibleMaterialUrls = [...new Set(materials
+        .filter(material => urls.includes(material.url))
+        .filter(material => !contextFlags.some(flag => flag.url === material.url && flag.reason !== 'commercial_refinance_of_mortgage'))
+        .map(material => material.url))];
     return {
         status: matches.length ? 'present' : (readableSources ? 'absent' : 'unknown'),
         urls: [...new Set(urls)],
+        eligible_urls: category === 'refinancing' ? eligibleMaterialUrls : [...new Set(urls)],
+        decision_status: matches.length === 0 ? (readableSources ? 'absent' : 'unknown') : (category === 'refinancing' && eligibleMaterialUrls.length === 0 ? 'excluded_context' : 'present'),
         matches: matches.length,
-        match_details: matches.slice(0, 20)
+        match_details: matches.slice(0, 20),
+        context_flags: [...new Map(contextFlags.map(item => [`${item.url}:${item.reason}`, item])).values()],
+        review_required: contextFlags.length > 0
     };
 }
 
 function explicitProductRelation(materials, summaries) {
     const productSources = materials.filter(material => summaries.product.urls.includes(material.url));
-    const fixedSources = new Set([...summaries.fixed_rate.urls, ...summaries.pricing.urls, ...summaries.documents.urls]);
+    const fixedSources = new Set([...summaries.fixed_rate.eligible_urls, ...summaries.pricing.eligible_urls, ...summaries.documents.eligible_urls]);
     for (const product of productSources) {
         const linked = product.links.find(url => fixedSources.has(url));
         if (linked) return {status: 'confirmed', basis: 'product_page_links_to_rate_or_document', urls: [product.url, linked]};
@@ -103,14 +155,14 @@ function explicitProductRelation(materials, summaries) {
     return {status: 'unknown', basis: 'insufficient_readable_relation_material', urls: []};
 }
 
-export async function evaluateContent(candidates, keywordGroups) {
+export async function evaluateContent(candidates, keywordGroups, {institution_id = candidates?.[0]?.institution_id || null} = {}) {
     const materials = [];
     const integrityErrors = [];
     const integrityWarnings = [];
     for (const candidate of candidates || []) {
         const sourceFlags = candidate.source_integrity_flags || [];
         const material = sourceFlags.includes('source_url_mismatch')
-            ? {readable: false, text: '', links: [], error: 'source_url_mismatch'}
+            ? {readable: false, text: '', links: [], cache_file: candidate.cache_file || null, error: 'source_url_mismatch'}
             : await readMaterial(candidate);
         if (sourceFlags.includes('source_url_mismatch')) {
             const bucket = isCriticalSourceCandidate(candidate) ? integrityErrors : integrityWarnings;
@@ -126,27 +178,41 @@ export async function evaluateContent(candidates, keywordGroups) {
             readable: material.readable,
             text: material.text,
             links: material.links,
+            cache_file: material.cache_file,
             error: material.error || null
         });
     }
 
+    const morphology = await prepareMorphology(materials, keywordGroups);
+
     const summaries = Object.fromEntries([...COVERAGE_CATEGORIES, 'pricing', 'documents'].map(category => [
         category,
-        categorySummary(materials, keywordGroups, category)
+        categorySummary(materials, keywordGroups, category, morphology)
     ]));
     const fullCoverageSources = materials.filter(material => COVERAGE_CATEGORIES.every(category => {
-        return summaries[category].urls.includes(material.url);
+        return summaries[category].eligible_urls.includes(material.url);
     }));
     const productRelation = explicitProductRelation(materials, summaries);
     const singleUrlFullCoverage = fullCoverageSources.length > 0;
     const multiSourceCoverage = !singleUrlFullCoverage
-        && COVERAGE_CATEGORIES.every(category => summaries[category].status === 'present')
+        && COVERAGE_CATEGORIES.every(category => summaries[category].decision_status === 'present')
         && productRelation.status === 'confirmed';
     const sufficientForSearchFirst = singleUrlFullCoverage || multiSourceCoverage;
-    const analysisSignalCount = COVERAGE_CATEGORIES.filter(category => summaries[category].status === 'present').length;
+    const analysisSignalCount = COVERAGE_CATEGORIES.filter(category => summaries[category].decision_status === 'present').length;
     // Discovery should maximize recall; the model resolves missing literal terms.
     const sufficientForAnalysis = materials.some(material => material.readable) && analysisSignalCount >= 2;
-    const coverageUrls = [...new Set(COVERAGE_CATEGORIES.flatMap(category => summaries[category].urls))];
+    const missingCategories = COVERAGE_CATEGORIES.filter(category => summaries[category].decision_status !== 'present');
+    const coverageUrls = [...new Set(COVERAGE_CATEGORIES.flatMap(category => summaries[category].eligible_urls))];
+    const criterionByUrl = {};
+    for (const [category, criterion] of [['product', 'housing'], ['refinancing', 'commercial_refinance'], ['fixed_rate', 'fixed_rate']]) {
+        for (const url of summaries[category].eligible_urls) criterionByUrl[url] = [...(criterionByUrl[url] || []), criterion];
+    }
+    const bundleSources = materials.map(material => ({
+        ...material,
+        source_role: classifySourceRole(material, Object.entries(summaries).filter(([, summary]) => summary.urls.includes(material.url)).map(([category]) => category))
+    }));
+    const productBundles = buildProductBundles({institution_id, sources: bundleSources, criterionByUrl, summaries});
+    const bundleDecision = evaluateProductBundles(productBundles);
 
     return {
         product: summaries.product,
@@ -159,13 +225,23 @@ export async function evaluateContent(candidates, keywordGroups) {
         multi_source_coverage: multiSourceCoverage,
         sufficient_for_search_first: sufficientForSearchFirst,
         sufficient_for_analysis: sufficientForAnalysis,
+        missing_categories: missingCategories,
         sufficiency_basis: singleUrlFullCoverage
             ? 'single_url_full_coverage'
             : (multiSourceCoverage ? 'multi_source_coverage' : (sufficientForAnalysis ? 'multi_signal_analysis' : null)),
         coverage_urls: coverageUrls,
+        product_bundles: productBundles,
+        bundle_decision: bundleDecision,
         readable_source_count: materials.filter(material => material.readable).length,
         unknown_source_count: materials.filter(material => !material.readable).length,
         integrity_errors: [...new Set(integrityErrors)],
-        integrity_warnings: [...new Set(integrityWarnings)]
+        integrity_warnings: [...new Set(integrityWarnings)],
+        morphology: {
+            engine: 'morfeusz2',
+            available: morphology.available,
+            error: morphology.error,
+            cache_hits: morphology.cache_hits,
+            cache_misses: morphology.cache_misses
+        }
     };
 }

@@ -1,6 +1,6 @@
 ---
 description: Ranks bank website URL candidates for fallback crawl using metadata only; never fetches pages or decides financial qualification.
-mode: subagent
+mode: primary
 model: openai/gpt-5.6-luna
 variant: low
 steps: 1

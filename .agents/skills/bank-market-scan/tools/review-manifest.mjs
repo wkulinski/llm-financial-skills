@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Command} from 'commander';
 import {readJson, dataPath} from './lib/common.mjs';
+import {manifestIncludes, readRunManifest} from './lib/run-manifest.mjs';
 
 const program = new Command();
 program
@@ -14,6 +15,7 @@ program
     .option('--automation-state <path>', 'automation state JSON', dataPath('work/automation-state.json'))
     .option('--review-packs-dir <path>', 'review packs directory', dataPath('work/review-packs'))
     .option('--updates-dir <path>', 'row updates directory', dataPath('work/row-updates'))
+    .option('--run-manifest <path>', 'exact-scope run manifest')
     .option('--out <path>', 'optional JSON output path')
     .option('--md-out <path>', 'optional Markdown output path', dataPath('exports/review-queue.md'))
     .parse(process.argv);
@@ -22,11 +24,13 @@ const opts = program.opts();
 const institutions = await readJson(opts.institutions);
 const state = await readJson(opts.state);
 const automation = await readJson(opts.automationState, {tasks: []});
+const runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
 
 const institutionById = new Map((institutions.institutions || []).map(inst => [inst.institution_id, inst]));
 const rowById = new Map((state.rows || []).map(row => [row.institution_id, row]));
 
 function includeTask(task) {
+    if (runManifest && !manifestIncludes(runManifest, task.institution_id, task.lp)) return false;
     if (opts.from && task.lp < opts.from) return false;
     if (opts.mode === 'ready') return task.stage === 'ready_for_review';
     if (opts.mode === 'escalation') return ['escalated', 'needs_user_review', 'error'].includes(task.stage);

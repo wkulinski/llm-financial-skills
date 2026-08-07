@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {Command} from 'commander';
 import {ensureDir, pathExists, readJson, slug, todayIso, writeJson, dataPath} from './lib/common.mjs';
+import {manifestIncludes, readRunManifest, validateRunManifest} from './lib/run-manifest.mjs';
 
 const program = new Command();
 program
@@ -12,6 +13,7 @@ program
     .option('--clear-cache', 'remove source cache and derived artifacts for selected institutions')
     .option('--clear-analysis', 'reset analysis rows for selected institutions')
     .option('--run-id <id>', 'run identifier')
+    .option('--run-manifest <path>', 'exact-scope run manifest')
     .option('--institutions <path>', 'institutions JSON', dataPath('base/institutions.current.json'))
     .option('--state <path>', 'analysis state JSON', dataPath('work/analysis-state.json'))
     .option('--automation-state <path>', 'automation state JSON', dataPath('work/automation-state.json'))
@@ -22,7 +24,14 @@ if (!opts.clearCache && !opts.clearAnalysis) throw new Error('Select at least on
 if (opts.limit != null && opts.limit < 1) throw new Error('--limit must be positive.');
 
 const institutions = await readJson(opts.institutions);
-const selectedLps = opts.lp.length
+const runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
+if (runManifest) {
+    const errors = validateRunManifest(runManifest, institutions);
+    if (errors.length) throw new Error(`Invalid run manifest: ${errors.join('; ')}`);
+}
+const selectedLps = runManifest
+    ? new Set(runManifest.lps.map(Number))
+    : opts.lp.length
     ? new Set(opts.lp)
     : new Set(institutions.institutions
         .filter(inst => !opts.from || inst.lp >= opts.from)
@@ -32,7 +41,7 @@ const selectedLps = opts.lp.length
 const selected = institutions.institutions.filter(inst => selectedLps.has(inst.lp));
 if (!selected.length) throw new Error('No institutions match the requested scope.');
 
-const runId = opts.runId || `reset-${Date.now()}-${process.pid}`;
+const runId = runManifest?.run_id || opts.runId || `reset-${Date.now()}-${process.pid}`;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const backupDir = dataPath('work/backups', `${runId}-${stamp}`);
 const runDir = dataPath('work/runs');
@@ -145,6 +154,7 @@ for (const inst of selected) {
         preprocessing_technical_flags: [],
         preprocessing_insufficient_flags: [],
         preprocessing_quality_warnings: [],
+        url_ranking: null,
         last_error: null,
         last_processed_at: null,
         run_id: runId
@@ -153,7 +163,7 @@ for (const inst of selected) {
 automation.updated_at = todayIso();
 await writeJson(opts.automationState, automation);
 
-const runManifest = {
+const runRecord = {
     run_id: runId,
     mode: 'reset',
     status: 'complete',
@@ -163,5 +173,5 @@ const runManifest = {
     actions: {clear_cache: Boolean(opts.clearCache), clear_analysis: Boolean(opts.clearAnalysis)},
     backup_dir: backupDir
 };
-await writeJson(path.join(runDir, `${runId}.json`), runManifest);
-console.log(JSON.stringify(runManifest, null, 2));
+await writeJson(path.join(runDir, `${runId}.json`), runRecord);
+console.log(JSON.stringify(runRecord, null, 2));

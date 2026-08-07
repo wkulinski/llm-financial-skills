@@ -1,37 +1,84 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "required": ["schema_version", "institution_id", "run_id", "ranked_candidates", "model"],
-  "properties": {
-    "schema_version": {"const": "1.0"},
-    "institution_id": {"type": "string", "minLength": 1},
-    "run_id": {"type": "string", "minLength": 1},
-    "ranked_candidates": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["candidate_id", "url", "priority", "role", "reason", "model_confidence"],
-        "properties": {
-          "candidate_id": {"type": "string", "minLength": 1},
-          "url": {"type": "string", "format": "uri"},
-          "priority": {"type": "integer", "minimum": 0, "maximum": 3},
-          "role": {"enum": ["core", "supporting", "excluded_context", "unknown"]},
-          "reason": {"type": "string", "minLength": 1},
-          "model_confidence": {"enum": ["low", "medium", "high"]}
-        },
-        "additionalProperties": false
-      }
-    },
+  "oneOf": [
+    {"$ref": "#/$defs/output10"},
+    {"$ref": "#/$defs/output11"}
+  ],
+  "$defs": {
     "model": {
       "type": "object",
       "required": ["provider", "model", "prompt_version"],
       "properties": {
-        "provider": {"type": "string"},
-        "model": {"type": "string"},
-        "prompt_version": {"type": "string"}
+        "provider": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "prompt_version": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false
+    },
+    "candidate10": {
+      "type": "object",
+      "required": ["candidate_id", "url", "priority", "role", "reason", "model_confidence"],
+      "properties": {
+        "candidate_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "format": "uri"},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 3},
+        "role": {"enum": ["core", "supporting", "excluded_context", "unknown"]},
+        "reason": {"type": "string", "minLength": 1},
+        "model_confidence": {"enum": ["low", "medium", "high"]}
+      },
+      "additionalProperties": false
+    },
+    "candidate11": {
+      "type": "object",
+      "required": ["candidate_ref", "priority", "role", "reason", "model_confidence"],
+      "properties": {
+        "candidate_ref": {"type": "string", "pattern": "^c[0-9]{4}$"},
+        "candidate_id": {"type": "string", "minLength": 1},
+        "url": {"type": "string", "format": "uri"},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 3},
+        "role": {"enum": ["core", "supporting", "excluded_context", "unknown"]},
+        "reason": {"type": "string", "minLength": 1},
+        "model_confidence": {"enum": ["low", "medium", "high"]}
+      },
+      "additionalProperties": false
+    },
+    "base": {
+      "type": "object",
+      "required": ["schema_version", "institution_id", "run_id", "ranked_candidates", "model"],
+      "properties": {
+        "schema_version": {"type": "string"},
+        "institution_id": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "ranked_candidates": {"type": "array"},
+        "model": {"$ref": "#/$defs/model"}
+      }
+    },
+    "output10": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {"const": "1.0"},
+            "ranked_candidates": {"items": {"$ref": "#/$defs/candidate10"}}
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "output11": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "type": "object",
+          "properties": {
+            "schema_version": {"const": "1.1"},
+            "inventory_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "ranked_candidates": {"items": {"$ref": "#/$defs/candidate11"}}
+          },
+          "unevaluatedProperties": false
+        }
+      ]
     }
-  },
-  "additionalProperties": false
+  }
 }

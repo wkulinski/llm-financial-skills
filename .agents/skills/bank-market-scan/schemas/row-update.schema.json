@@ -6,6 +6,7 @@
     "institution_id": {"type": "string"},
     "lp": {"type": "integer"},
     "review_status": {"enum": ["unchecked", "checked", "needs_review", "error"]},
+    "decision_status": {"enum": ["qualified", "explicitly_not_qualified", "unconfirmed", "technical_error", "pending_review"]},
     "checked_at": {"type": ["string", "null"]},
     "website_available": {"type": ["boolean", "null"]},
     "qualifies": {"type": ["boolean", "null"]},
@@ -43,6 +44,8 @@
       "additionalProperties": true
     },
     "offer": {"type": "object", "additionalProperties": true},
+    "product_bundles": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+    "bundle_decision": {"type": "object", "additionalProperties": true},
     "requirements": {"type": "object", "additionalProperties": true},
     "promotion": {"type": "object", "additionalProperties": true},
     "professional_groups": {"type": "object", "additionalProperties": true},

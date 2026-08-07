@@ -1,11 +1,23 @@
 import {describe, expect, it} from 'vitest';
-import {assessPreprocessing, needsRetry} from '../../.agents/skills/bank-market-scan/tools/lib/automation.mjs';
+import {assessPreprocessing, ensureTask, markTask, needsRetry} from '../../.agents/skills/bank-market-scan/tools/lib/automation.mjs';
 
 function readableSource() {
     return [{source_type: 'html', text: 'czytelny tekst źródłowy'}];
 }
 
 describe('preprocessing automation contract', () => {
+    it('initializes a missing run-local task without mutating global state', () => {
+        const automation = {tasks: [{lp: 1, institution_id: 'bank_a', stage: 'checked'}]};
+        const task = ensureTask(automation, {lp: 2, institution_id: 'bank_b'}, 'run-test');
+
+        expect(task).toMatchObject({lp: 2, institution_id: 'bank_b', stage: 'pending_prepare', run_id: 'run-test', attempt_count: 0});
+        expect(automation.tasks).toHaveLength(2);
+    });
+
+    it('fails explicitly instead of masking a missing automation task', () => {
+        expect(() => markTask(undefined, {stage: 'error'})).toThrow('automation task is required');
+    });
+
     it('does not retry when content is sufficient despite a missing literal keyword', () => {
         const assessment = assessPreprocessing(
             {sufficient_for_analysis: true},

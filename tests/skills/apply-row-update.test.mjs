@@ -29,4 +29,22 @@ describe('apply-row-update safety', () => {
         expect(merged.offer).toEqual({product_name: 'New', rrso: 0.061});
         expect(merged.requirements).toEqual({account_required: true, card_payments_required: true});
     });
+
+    it('replaces field evidence for a fresh interpretation instead of retaining stale IDs', () => {
+        const merged = mergeRowUpdate({
+            institution_id: 'bank_a',
+            lp: 1,
+            field_evidence: {
+                product: [{evidence_id: 'old-product'}],
+                refinancing: [{evidence_id: 'old-refinancing'}]
+            }
+        }, {
+            institution_id: 'bank_a',
+            lp: 1,
+            field_evidence: {
+                product: [{evidence_id: 'new-product'}]
+            }
+        });
+        expect(merged.field_evidence).toEqual({product: [{evidence_id: 'new-product'}]});
+    });
 });

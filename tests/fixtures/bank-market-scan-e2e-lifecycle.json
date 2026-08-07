@@ -1,0 +1,53 @@
+{
+  "schema_version": "e2e-lifecycle-1.0",
+  "requires_network": false,
+  "requires_model": false,
+  "normalization_engine": "morfeusz2",
+  "cases": [
+    {
+      "lp": 1,
+      "institution_id": "bank_tak",
+      "name": "Bank TAK",
+      "decision": "qualified",
+      "source_role": "core",
+      "categories": ["product", "refinancing", "fixed_rate"],
+      "text": "Kredyt mieszkaniowy umożliwia spłatę kredytu mieszkaniowego z innego banku. Oprocentowanie okresowo stałe."
+    },
+    {
+      "lp": 2,
+      "institution_id": "bank_nie",
+      "name": "Bank NIE",
+      "decision": "explicitly_not_qualified",
+      "source_role": "core",
+      "categories": ["product", "fixed_rate"],
+      "text": "Kredyt mieszkaniowy z oprocentowaniem okresowo stałym, bez informacji o spłacie wcześniejszego kredytu."
+    },
+    {
+      "lp": 3,
+      "institution_id": "bank_ambiguous",
+      "name": "Bank AMBIGUOUS",
+      "decision": "pending_review",
+      "source_role": "core",
+      "categories": ["product", "refinancing", "fixed_rate"],
+      "text": "Kredyt mieszkaniowy i możliwość konsolidacji zobowiązań; opis nie rozstrzyga spłaty kredytu mieszkaniowego."
+    },
+    {
+      "lp": 4,
+      "institution_id": "bank_excluded",
+      "name": "Bank EXCLUDED",
+      "decision": "explicitly_not_qualified",
+      "source_role": "excluded_context",
+      "categories": ["refinancing"],
+      "text": "Refinansowanie kredytu firmowego — materiał wyłączony z kontekstu kredytu mieszkaniowego."
+    },
+    {
+      "lp": 5,
+      "institution_id": "bank_morfeusz",
+      "name": "Bank MORFEUSZ",
+      "decision": "qualified",
+      "source_role": "core",
+      "categories": ["product", "refinancing", "fixed_rate"],
+      "text": "Oferta kredytu mieszkaniowego na spłatę kredytu hipotecznego zaciągniętego w innym banku, oprocentowanie okresowo stałe."
+    }
+  ]
+}

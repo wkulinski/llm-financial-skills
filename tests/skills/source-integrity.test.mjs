@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {describe, expect, it} from 'vitest';
 import {normalizeUrlIdentity, sourceCacheFile, sha256} from '../../.agents/skills/bank-market-scan/tools/lib/common.mjs';
-import {isCriticalSourceCandidate, validateCandidateCaches} from '../../.agents/skills/bank-market-scan/tools/lib/source-integrity.mjs';
+import {hardExclusionReason, isCriticalSourceCandidate, validateCandidateCaches} from '../../.agents/skills/bank-market-scan/tools/lib/source-integrity.mjs';
 import {evaluateContent} from '../../.agents/skills/bank-market-scan/tools/lib/content-check.mjs';
 
 describe('source integrity', () => {
@@ -15,6 +15,13 @@ describe('source integrity', () => {
     it('does not make low-priority crawl noise a critical source error', () => {
         expect(isCriticalSourceCandidate({source: 'homepage', score: 0, prioritized_candidate: false})).toBe(false);
         expect(isCriticalSourceCandidate({source: 'search', score: 0})).toBe(true);
+    });
+
+    it('hard-excludes canonical mismatches, blocked/error pages, and pagination noise', () => {
+        expect(hardExclusionReason({source_integrity_flags: ['source_url_mismatch']})).toBe('source_url_mismatch');
+        expect(hardExclusionReason({status: 403})).toBe('http_403');
+        expect(hardExclusionReason({url: 'https://bank.example/page/2/?et_blog=', title: 'Starsze wpisy'}))
+            .toBe('navigation_or_archive_noise');
     });
     it('creates different cache files for different URLs with the same title prefix', () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bank-source-integrity-'));

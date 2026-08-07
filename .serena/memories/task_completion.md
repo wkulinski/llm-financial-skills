@@ -1,0 +1,1 @@
+For bank-market-scan code changes, run `npm --prefix .agents/skills/bank-market-scan run check`, targeted Vitest tests, then `npm test` when practical. Run `validate-state.mjs`/skill-specific checks when state or schemas change. Review `git diff` and `git status`; do not commit unless explicitly requested.

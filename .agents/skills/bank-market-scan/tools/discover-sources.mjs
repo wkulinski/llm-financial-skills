@@ -38,8 +38,9 @@ import {
 } from './lib/discovery.mjs';
 import {evaluateContent} from './lib/content-check.mjs';
 import {normalizeMaterial} from './lib/material.mjs';
-import {isCriticalSourceCandidate, sourceBufferIntegrityErrors, validateCandidateCaches} from './lib/source-integrity.mjs';
-import {buildRankingManifest, rankManifest, selectInitialPool} from './lib/url-ranking.mjs';
+import {isCriticalSourceCandidate, isHardExcludedSourceCandidate, sourceBufferIntegrityErrors, validateCandidateCaches} from './lib/source-integrity.mjs';
+import {DEFAULT_RANKING_TIMEOUT_MS, buildRankingManifest, buildSelectionReport, rankManifest, selectAdditionalPool, selectInitialPool} from './lib/url-ranking.mjs';
+import {manifestIncludes, readRunManifest} from './lib/run-manifest.mjs';
 
 const DEFAULT_SEARCH_QUERIES = [
     '"kredyt mieszkaniowy"',
@@ -63,18 +64,30 @@ program
     .option('--seed-max <number>', 'max search-first seed URLs to fetch', value => parseInt(value, 10), 8)
     .option('--search-query <query>', 'override a search query; repeatable', (value, previous) => [...previous, value], [])
     .option('--google-host <host>', 'Google host', 'www.google.com')
-    .option('--google-base-url <url>', 'override Google base URL; intended for controlled test providers')
+    .option('--google-base-url <url>', 'override Google base URL; requires --enable-google-search')
     .option('--search-timeout-ms <number>', 'search timeout', value => parseInt(value, 10), 15000)
+    .option('--enable-google-search', 'enable Google search; disabled by default')
     .option('--refresh', 'refresh cached candidate list')
     .option('--fresh', 'ignore previous candidates and monitored source baseline')
     .option('--run-id <id>', 'run identifier propagated to generated artifacts')
+    .option('--run-manifest <path>', 'exact-scope run manifest')
     .option('--skip-unchanged', 'when refreshing, do not rewrite cached source files if content hash did not change')
     .option('--source-refresh-run-id <id>', 'source refresh cycle identifier')
-    .option('--url-ranking', 'rank fallback URLs with the configured OpenCode subagent')
-    .option('--url-ranking-deterministic', 'use deterministic ranking instead of OpenCode; intended for tests')
+    .option('--lightweight-refresh', 'refresh only previously monitored URLs; skip search, crawl and ranking')
+    .option('--ranking-provider <provider>', 'URL ranking provider: auto or deterministic', value => {
+        if (!['auto', 'deterministic'].includes(value)) throw new Error('Ranking provider must be auto or deterministic.');
+        return value;
+    }, 'deterministic')
+    .option('--ranking-timeout-ms <number>', 'OpenCode ranking timeout', value => parseInt(value, 10), DEFAULT_RANKING_TIMEOUT_MS)
+    .option('--fetch-timeout-ms <number>', 'per-URL fetch timeout', value => parseInt(value, 10), 8000)
+    .option('--max-additional-pools <number>', 'maximum adaptive pools after the initial ranking pool', value => parseInt(value, 10), 1)
+    .option('--url-ranking', 'deprecated alias for --ranking-provider auto')
+    .option('--url-ranking-deterministic', 'compatibility alias for --ranking-provider deterministic')
     .option('--allow-external', 'deprecated; use allowed_source_hosts on the institution instead')
     .parse(process.argv);
 const opts = program.opts();
+if (!Number.isInteger(opts.fetchTimeoutMs) || opts.fetchTimeoutMs < 1) throw new Error('--fetch-timeout-ms must be a positive integer.');
+if (!Number.isInteger(opts.maxAdditionalPools) || opts.maxAdditionalPools < 0) throw new Error('--max-additional-pools must be a non-negative integer.');
 
 const keywords = await readJson(bundledPath('schemas/evidence-keywords.json'));
 const institutions = opts.url ? null : await readJson(opts.institutions);
@@ -83,9 +96,19 @@ if (!opts.url && (opts.lp || opts.institutionId) && !inst) throw new Error('Inst
 const baseUrl = opts.url || inst?.website_url;
 if (!baseUrl) throw new Error('No website URL. Pass --url or valid --lp/--institution-id.');
 const id = inst?.institution_id || `manual_${slug(baseUrl)}`;
+const runManifest = opts.runManifest ? await readRunManifest(opts.runManifest) : null;
+if (runManifest && !manifestIncludes(runManifest, id, inst?.lp)) {
+    throw new Error(`Record outside run manifest: institution_id=${id} lp=${inst?.lp ?? 'manual'}`);
+}
 const cacheDir = dataPath('cache/institutions', `${String(inst?.lp ?? 'manual').padStart(3, '0')}-${slug(inst?.name || baseUrl)}`);
 await ensureDir(cacheDir);
 const outFile = path.join(cacheDir, 'candidates.json');
+const runId = runManifest?.run_id || opts.runId || `run-${Date.now()}-${process.pid}`;
+const rankingProvider = opts.urlRanking
+    ? 'auto'
+    : (opts.urlRankingDeterministic ? 'deterministic' : (opts.rankingProvider || 'deterministic'));
+const googleSearchEnabled = runManifest ? runManifest.search_enabled === true : Boolean(opts.enableGoogleSearch);
+if (opts.urlRanking) console.error('Warning: --url-ranking is deprecated; ranking now runs automatically after discovery.');
 
 let previous = null;
 if (!opts.fresh) {
@@ -116,10 +139,11 @@ const fetchCounts = {
     conditional_304: 0,
     material_normalized: 0
 };
+const sourceMetadataByUrl = new Map();
 
 async function tryFetch(url) {
     try {
-        return await fetchText(url, {timeoutMs: 20000});
+        return await fetchText(url, {timeoutMs: opts.fetchTimeoutMs});
     } catch (error) {
         return {ok: false, status: 0, text: '', error: error.message, finalUrl: url, contentType: ''};
     }
@@ -167,8 +191,9 @@ function addCandidate(target, collection, source) {
 function uniqueCandidates(candidates) {
     const seen = new Set();
     return candidates.filter(candidate => {
-        if (seen.has(candidate.url)) return false;
-        seen.add(candidate.url);
+        const identity = normalizeUrlIdentity(candidate.url);
+        if (seen.has(identity)) return false;
+        seen.add(identity);
         return true;
     });
 }
@@ -203,8 +228,10 @@ async function fetchCandidates(candidates) {
         if (candidate.source === 'crawl' || candidate.source === 'homepage' || candidate.source === 'sitemap') fetchCounts.fallback_urls += 1;
         const fileName = `${slug(candidate.title || candidate.url, 50)}-${slug(candidate.url, 30)}`;
         const previousCandidate = previousByUrl.get(candidate.url);
-        const meta = {
-            ...candidate,
+            const sourceMetadata = sourceMetadataByUrl.get(normalizeUrlIdentity(candidate.url)) || {};
+            const meta = {
+                ...sourceMetadata,
+                ...candidate,
             fetched_at: todayIso(),
             available: null,
             status: null,
@@ -234,7 +261,7 @@ async function fetchCandidates(candidates) {
             const conditionalHeaders = {};
             if (previousCacheIsCanonical && previousCandidate?.etag) conditionalHeaders['if-none-match'] = previousCandidate.etag;
             if (previousCacheIsCanonical && previousCandidate?.last_modified) conditionalHeaders['if-modified-since'] = previousCandidate.last_modified;
-            const response = await fetchBuffer(candidate.url, {timeoutMs: 25000, headers: conditionalHeaders});
+            const response = await fetchBuffer(candidate.url, {timeoutMs: opts.fetchTimeoutMs, headers: conditionalHeaders});
             if (response.status === 304 && previousCandidate && previousCacheIsCanonical) {
                 fetchCounts.conditional_304 += 1;
                 let materialSha = previousCandidate.material_sha256 || null;
@@ -320,6 +347,42 @@ async function fetchCandidates(candidates) {
     })));
 }
 
+async function runLightweightRefresh() {
+    if (!previous || previousMonitoredUrls.length === 0) return false;
+    const refreshed = await fetchCandidates(historicalCandidates());
+    const refreshedByUrl = new Map(refreshed.map(candidate => [normalizeUrlIdentity(candidate.final_url || candidate.url), candidate]));
+    const allCandidates = uniqueCandidates((previous.all_candidates || previous.candidates || []).map(candidate => {
+        const refreshedCandidate = refreshedByUrl.get(normalizeUrlIdentity(candidate.final_url || candidate.url));
+        return refreshedCandidate ? {...candidate, ...refreshedCandidate} : candidate;
+    }));
+    const monitoredCandidates = refreshed.filter(candidate => candidate.available !== false);
+    const offerChanged = refreshed.some(candidate => candidate.offer_changed_since_last_fetch === true);
+    const output = {
+        ...previous,
+        run_id: runId,
+        fetched_at: todayIso(),
+        sources_refreshed_at: new Date().toISOString(),
+        source_refresh_run_id: opts.sourceRefreshRunId || null,
+        discovery_mode: 'lightweight_refresh',
+        discovery_changed_since_last_fetch: false,
+        offer_changed_since_last_fetch: offerChanged,
+        monitored_urls: monitoredCandidates.map(candidate => candidate.final_url || candidate.url),
+        previous_monitored_urls: previousMonitoredUrls,
+        candidates: monitoredCandidates,
+        all_candidates: allCandidates,
+        fetch_counts: fetchCounts,
+        timings_ms: {...(previous.timings_ms || {}), search: 0, fallback_crawl: 0, ranking: 0, total: Date.now() - discoveryStartedAt},
+        google_search_enabled: false,
+        fallback_trigger_reason: 'lightweight_changed_only_refresh',
+        url_ranking: previous.url_ranking ? {...previous.url_ranking, provider: 'not_run_lightweight_refresh', mode: 'lightweight_refresh'} : null
+    };
+    await writeJsonAtomic(outFile, output);
+    console.log(JSON.stringify(output, null, 2));
+    return true;
+}
+
+if (opts.lightweightRefresh && await runLightweightRefresh()) process.exit(0);
+
 async function runSearchWave(queries) {
     const runs = await Promise.all(queries.map(async query => {
         const startedAt = Date.now();
@@ -335,6 +398,8 @@ async function runSearchWave(queries) {
     const merged = mergeSearchResults(runs);
     const ranked = rankSearchResults(merged, keywords);
     const selected = selectSearchSeeds(ranked, {maxResults: opts.seedMax});
+    const inventoryCandidates = [];
+    ranked.forEach(candidate => addCandidate(candidate, inventoryCandidates, 'search'));
     const searchCandidates = [];
     selected.forEach(candidate => addCandidate(candidate, searchCandidates, 'search'));
     return {
@@ -342,6 +407,7 @@ async function runSearchWave(queries) {
         status: aggregateSearchStatus(runs),
         ranked,
         selected,
+        inventory: uniqueCandidates(inventoryCandidates),
         candidates: uniqueCandidates(searchCandidates)
     };
 }
@@ -351,6 +417,17 @@ async function runSearchFirst() {
         ? opts.searchQuery
         : DEFAULT_SEARCH_QUERIES.map(query => `site:${baseHost} ${query}`);
     return runSearchWave(queries);
+}
+
+function disabledSearchResult() {
+    return {
+        runs: [{query: null, status: 'unavailable', diagnostic_code: 'google_search_disabled', results: []}],
+        status: 'unavailable',
+        ranked: [],
+        selected: [],
+        inventory: [],
+        candidates: []
+    };
 }
 
 async function runLegacyCrawl() {
@@ -394,13 +471,14 @@ async function runLegacyCrawl() {
 }
 
 const searchStartedAt = Date.now();
-const firstSearch = await runSearchFirst();
+const firstSearch = googleSearchEnabled ? await runSearchFirst() : disabledSearchResult();
 let searchElapsedMs = Date.now() - searchStartedAt;
 let fallbackElapsedMs = 0;
 let searchRuns = firstSearch.runs;
 let searchStatus = firstSearch.status;
 let rankedSearchResults = firstSearch.ranked;
 let selectedSearchResults = firstSearch.selected;
+let searchInventoryCandidates = firstSearch.inventory;
 let selectedCandidates = uniqueCandidates([...firstSearch.candidates, ...historicalCandidates()]);
 let fallback = searchStatus === 'unavailable';
 let fallbackTriggerReason = fallback
@@ -408,10 +486,61 @@ let fallbackTriggerReason = fallback
     : null;
 let crawl = {home: null, candidates: []};
 let urlRanking = null;
+let rankingElapsedMs = 0;
+let fallbackStartedAt = null;
+let expansionStopReason = null;
+let earlyStopReason = null;
+
+async function rankDiscoveryInventory(candidates, mode) {
+    if (!candidates.length) {
+        return {
+            provider: 'not_run_empty_inventory',
+            mode: 'automatic_after_discovery',
+            discoveryMode: mode,
+            selected_pool: [],
+            manifest: null,
+            rankingMs: 0,
+            attempts: []
+        };
+    }
+
+    const manifest = buildRankingManifest({
+        institution: {
+            institution_id: id,
+            lp: inst?.lp ?? null,
+            name: inst?.name ?? ''
+        },
+        homepageUrl: baseUrl,
+        runId,
+        candidates,
+        discovery: {
+            mode,
+            complete: true
+        }
+    });
+    for (const candidate of candidates) {
+        sourceMetadataByUrl.set(normalizeUrlIdentity(candidate.url), candidate);
+    }
+    const startedAt = Date.now();
+    const result = await rankManifest(manifest, {
+        useOpenCode: rankingProvider === 'auto',
+        ...(opts.rankingTimeoutMs ? {timeoutMs: opts.rankingTimeoutMs} : {})
+    });
+    const rankingMs = Math.max(0, Date.now() - startedAt);
+    const selectedPool = selectInitialPool(result.ranking, manifest.candidates);
+    return {
+        ...result,
+        mode: 'automatic_after_discovery',
+        discoveryMode: mode,
+        manifest,
+        selected_pool: selectedPool.map(candidate => candidate.url),
+        rankingMs
+    };
+}
 const seedFetchStartedAt = Date.now();
 let fetched = await fetchCandidates(selectedCandidates);
 let seedFetchElapsedMs = Date.now() - seedFetchStartedAt;
-let searchContentCheck = await evaluateContent(fetched, keywords);
+let searchContentCheck = await evaluateContent(fetched, keywords, {institution_id: id});
 
 if (!fallback && !searchContentCheck.sufficient_for_search_first && !opts.searchQuery.length) {
     const secondary = await runSearchWave(SECONDARY_SEARCH_QUERIES.map(query => `site:${baseHost} ${query}`));
@@ -421,6 +550,10 @@ if (!fallback && !searchContentCheck.sufficient_for_search_first && !opts.search
     const merged = mergeSearchResults(searchRuns);
     rankedSearchResults = rankSearchResults(merged, keywords);
     selectedSearchResults = selectSearchSeeds(rankedSearchResults, {maxResults: opts.seedMax});
+    searchInventoryCandidates = uniqueCandidates([
+        ...searchInventoryCandidates,
+        ...secondary.inventory
+    ]);
     const selectedUrls = new Set(fetched.map(candidate => candidate.url));
     const secondaryCandidates = [];
     selectedSearchResults.forEach(candidate => {
@@ -433,7 +566,7 @@ if (!fallback && !searchContentCheck.sufficient_for_search_first && !opts.search
     const secondarySeedFetchStartedAt = Date.now();
     fetched = [...fetched, ...(await fetchCandidates(uniqueCandidates(secondaryCandidates)))];
     seedFetchElapsedMs += Date.now() - secondarySeedFetchStartedAt;
-    searchContentCheck = await evaluateContent(fetched, keywords);
+    searchContentCheck = await evaluateContent(fetched, keywords, {institution_id: id});
 }
 
 if (!fallback) {
@@ -450,51 +583,146 @@ if (!fallback) {
 }
 
 if (fallback) {
-    const fallbackStartedAt = Date.now();
+    fallbackStartedAt = Date.now();
     crawl = await runLegacyCrawl();
-    const alreadyFetched = new Set(fetched.map(candidate => candidate.url));
-    const crawlCandidates = crawl.candidates.filter(candidate => !alreadyFetched.has(candidate.url));
-    let fallbackCandidates = crawlCandidates;
-    if (opts.urlRanking || opts.urlRankingDeterministic) {
-        const rankingCandidates = uniqueCandidates([...fetched, ...crawlCandidates]);
-        const manifest = buildRankingManifest({
-            institution: {
-                institution_id: id,
-                lp: inst?.lp ?? null,
-                name: inst?.name ?? ''
-            },
-            homepageUrl: baseUrl,
-            runId: opts.runId || `ranking-${Date.now()}-${process.pid}`,
-            candidates: rankingCandidates
-        });
-        urlRanking = await rankManifest(manifest, {useOpenCode: !opts.urlRankingDeterministic});
-        const selectedPool = selectInitialPool(urlRanking.ranking, manifest.candidates);
-        const selectedUrls = new Set(selectedPool.map(candidate => candidate.url));
-        fallbackCandidates = crawlCandidates.filter(candidate => selectedUrls.has(candidate.url));
-        urlRanking.selected_pool = selectedPool.map(candidate => candidate.url);
-    }
-    fetched = [...fetched, ...(await fetchCandidates(fallbackCandidates))];
-    fallbackElapsedMs = Date.now() - fallbackStartedAt;
+    const rankingCandidates = uniqueCandidates([
+        ...fetched,
+        ...searchInventoryCandidates,
+        ...historicalCandidates(),
+        ...crawl.candidates
+    ]);
+    urlRanking = await rankDiscoveryInventory(rankingCandidates, 'crawl_fallback');
+    rankingElapsedMs = urlRanking.rankingMs;
+} else {
+    const rankingCandidates = uniqueCandidates([
+        ...fetched,
+        ...searchInventoryCandidates,
+        ...historicalCandidates()
+    ]);
+    urlRanking = await rankDiscoveryInventory(rankingCandidates, 'search_first');
+    rankingElapsedMs = urlRanking.rankingMs;
 }
 
+const selectionFetchStartedAt = Date.now();
+const initialPool = urlRanking?.ranking && urlRanking.manifest && !searchContentCheck.single_url_full_coverage
+    ? selectInitialPool(urlRanking.ranking, urlRanking.manifest.candidates)
+    : [];
+if (searchContentCheck.single_url_full_coverage) earlyStopReason = 'single_product_page_complete_criteria';
+const alreadyFetched = new Set(fetched
+    .flatMap(candidate => [candidate.url, candidate.final_url])
+    .filter(Boolean)
+    .map(normalizeUrlIdentity));
+const initialCandidates = initialPool.filter(candidate => !alreadyFetched.has(normalizeUrlIdentity(candidate.url)));
+fetched = [...fetched, ...(await fetchCandidates(initialCandidates))];
+
+const expandedPools = [];
+const expansionReasons = [];
+let additionalPoolCount = 0;
+let finalContentCheck;
+while (true) {
+    finalContentCheck = await evaluateContent(uniqueCandidates(fetched), keywords, {institution_id: id});
+    const missingCategories = ['product', 'refinancing', 'fixed_rate']
+        .filter(category => finalContentCheck[category]?.status !== 'present');
+    if (!urlRanking?.ranking || missingCategories.length === 0) break;
+    if (additionalPoolCount >= opts.maxAdditionalPools) {
+        expansionStopReason = 'max_additional_pools_reached';
+        break;
+    }
+
+    const additionalPool = selectAdditionalPool(urlRanking.ranking, urlRanking.manifest.candidates, {
+        alreadyFetchedUrls: fetched
+            .flatMap(candidate => [candidate.url, candidate.final_url])
+            .filter(Boolean),
+        missingCategories,
+        limit: 8
+    });
+    if (additionalPool.length === 0) break;
+
+    const additionalUrls = additionalPool.map(candidate => candidate.url);
+    additionalPoolCount += 1;
+    expandedPools.push(additionalUrls);
+    expansionReasons.push({missing_categories: missingCategories, selected_urls: additionalUrls});
+    fetched = [...fetched, ...(await fetchCandidates(additionalPool))];
+}
+
+if (fallbackStartedAt !== null) fallbackElapsedMs = Date.now() - fallbackStartedAt;
 const fetchedCandidates = uniqueCandidates(fetched);
-const allCandidates = uniqueCandidates([...fetched, ...(fallback ? crawl.candidates : [])]);
+if (urlRanking?.selectionReportPath) {
+    await writeJson(urlRanking.selectionReportPath, buildSelectionReport(urlRanking.manifest, urlRanking.ranking, {
+        provider: urlRanking.provider,
+        selectedPool: initialPool,
+        expandedPools,
+        expansionReasons,
+        maxAdditionalPools: opts.maxAdditionalPools,
+        expansionStopReason,
+        fetchedUrls: fetchedCandidates.map(candidate => candidate.final_url || candidate.url),
+        skippedUrls: urlRanking.manifest.candidates
+            .filter(candidate => !fetchedCandidates.some(fetchedCandidate =>
+                normalizeUrlIdentity(fetchedCandidate.final_url || fetchedCandidate.url) === normalizeUrlIdentity(candidate.url)
+            ))
+            .map(candidate => candidate.url),
+        rankingMs: urlRanking.rankingMs,
+        fetchMs: Math.max(0, Date.now() - selectionFetchStartedAt)
+    }));
+}
+
+const allCandidates = uniqueCandidates([
+    ...fetched,
+    ...searchInventoryCandidates,
+    ...historicalCandidates(),
+    ...(fallback ? crawl.candidates : [])
+]);
 const cacheIntegrityErrors = await validateCandidateCaches(allCandidates);
 const sourceUrlMismatchCount = allCandidates.filter(candidate => (candidate.source_integrity_flags || []).includes('source_url_mismatch')).length;
-const finalContentCheck = fallback
-    ? await evaluateContent(allCandidates, keywords)
-    : searchContentCheck;
 const integrityErrors = [
     ...cacheIntegrityErrors,
     ...(finalContentCheck.integrity_errors || []).map(error => ({type: error, source: 'content_check'}))
 ];
 const integrityWarnings = (finalContentCheck.integrity_warnings || []).map(error => ({type: error, source: 'content_check'}));
 const prioritized = allCandidates
-    .filter(candidate => candidate.prioritized_candidate)
+    .filter(candidate => candidate.prioritized_candidate && !isHardExcludedSourceCandidate(candidate))
     .slice(0, prioritizedMax);
 const relevantUrls = new Set(finalContentCheck.coverage_urls || []);
 const relevantCandidates = allCandidates.filter(candidate => relevantUrls.has(candidate.final_url || candidate.url));
-const activeCandidates = fallback ? fetchedCandidates : allCandidates;
+// Keep fetched failures and canonical mismatches in all_candidates for diagnostics,
+// but never expose them to extraction, evidence, monitoring, or the review pack.
+const activeCandidates = fetchedCandidates.filter(candidate => !isHardExcludedSourceCandidate(candidate));
+if (urlRanking?.ranking && urlRanking.outputPath) {
+    const hardExcludedIds = new Set(allCandidates
+        .filter(isHardExcludedSourceCandidate)
+        .map(candidate => candidate.candidate_id)
+        .filter(Boolean));
+    const hardExcludedUrls = new Set(allCandidates
+        .filter(isHardExcludedSourceCandidate)
+        .map(candidate => normalizeUrlIdentity(candidate.final_url || candidate.url)));
+    const sanitizedRanking = {
+        ...urlRanking.ranking,
+        ranked_candidates: (urlRanking.ranking.ranked_candidates || []).filter(candidate =>
+            !hardExcludedIds.has(candidate.candidate_id)
+            && !hardExcludedUrls.has(normalizeUrlIdentity(candidate.url))
+        )
+    };
+    urlRanking.ranking = sanitizedRanking;
+    await writeJsonAtomic(urlRanking.outputPath, sanitizedRanking);
+    const finalSelectionPool = selectInitialPool(sanitizedRanking, activeCandidates);
+    urlRanking.selected_pool = finalSelectionPool.map(candidate => candidate.url);
+    await writeJson(urlRanking.selectionReportPath, buildSelectionReport(urlRanking.manifest, sanitizedRanking, {
+        provider: urlRanking.provider,
+        selectedPool: finalSelectionPool,
+        expandedPools,
+        expansionReasons,
+        expansionStopReason,
+        fetchedUrls: activeCandidates.map(candidate => candidate.final_url || candidate.url),
+        skippedUrls: urlRanking.manifest.candidates
+            .filter(candidate => !activeCandidates.some(activeCandidate =>
+                normalizeUrlIdentity(activeCandidate.final_url || activeCandidate.url) === normalizeUrlIdentity(candidate.url)
+            ))
+            .map(candidate => candidate.url),
+        maxAdditionalPools: opts.maxAdditionalPools,
+        rankingMs: urlRanking.rankingMs,
+        fetchMs: Math.max(0, Date.now() - selectionFetchStartedAt)
+    }));
+}
 const monitoredUrls = [...new Set(activeCandidates.map(candidate => candidate.final_url || candidate.url))];
 const previousBaselineAvailable = Boolean(previous && previousMonitoredUrls.length);
 const discoveryChangedSinceLastFetch = previousBaselineAvailable
@@ -553,23 +781,41 @@ const output = {
     discovery_changed_since_last_fetch: discoveryChangedSinceLastFetch,
     offer_changed_since_last_fetch: offerChangedSinceLastFetch,
     source_refresh_run_id: opts.sourceRefreshRunId || null,
-    run_id: opts.runId || null,
+    run_id: runId,
     sources_refreshed_at: new Date().toISOString(),
     timings_ms: {
         search: searchElapsedMs,
         seed_fetch: seedFetchElapsedMs,
         fallback_crawl: fallbackElapsedMs || 0,
+        ranking: rankingElapsedMs,
         total: Date.now() - discoveryStartedAt
     },
     fetch_counts: fetchCounts,
+    fetch_timeout_ms: opts.fetchTimeoutMs,
+    google_search_enabled: googleSearchEnabled,
     fallback_trigger_reason: fallbackTriggerReason,
+    early_stop_reason: earlyStopReason,
     url_ranking: urlRanking ? {
         provider: urlRanking.provider,
+        mode: urlRanking.mode,
         manifest_path: urlRanking.manifestPath,
         raw_response_path: urlRanking.rawPath,
         ranking_path: urlRanking.outputPath,
         validation_report_path: urlRanking.validationPath,
-        selected_pool: urlRanking.selected_pool || []
+        selection_report_path: urlRanking.selectionReportPath || null,
+        candidate_count: urlRanking.manifest?.discovery?.candidate_count || 0,
+        model_candidate_count: urlRanking.manifest?.discovery?.model_candidate_count || 0,
+        locked_noise_count: urlRanking.manifest?.discovery?.locked_noise_count || 0,
+        inventory_sha256: urlRanking.manifest?.discovery?.inventory_sha256 || null,
+         selected_pool: urlRanking.selected_pool || [],
+         expanded_pools: expandedPools,
+         expansion_reasons: expansionReasons,
+         max_additional_pools: opts.maxAdditionalPools,
+         expansion_stop_reason: expansionStopReason,
+         attempts: urlRanking.attempts?.length || 0,
+        fallback_reason: urlRanking.provider.startsWith('deterministic') && rankingProvider === 'auto'
+            ? urlRanking.provider
+            : null
     } : null,
     search_quality_flags: searchQualityFlags,
     content_quality_summary: {

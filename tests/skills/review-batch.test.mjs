@@ -121,4 +121,58 @@ describe('review-batch', () => {
         expect(summary).toContain('"needs_user_review": 1');
         expect(JSON.parse(fs.readFileSync(path.join(cwd, 'data/work/analysis-state.json'), 'utf8')).rows[0].review_status).toBe('unchecked');
     });
+
+    it('keeps exact-scope review state and updates inside the run directory', () => {
+        const cwd = makeTempDir();
+        const runDir = path.join(cwd, 'data/work/runs/run-review');
+        fs.mkdirSync(path.join(cwd, 'data/base'), {recursive: true});
+        fs.mkdirSync(path.join(cwd, 'data/work'), {recursive: true});
+        fs.mkdirSync(path.join(runDir, 'row-updates'), {recursive: true});
+        fs.writeFileSync(path.join(cwd, 'data/base/institutions.current.json'), JSON.stringify({institutions: [
+            {lp: 1, institution_id: 'bank_a', type: 'bank_spoldzielczy', name: 'Bank A', website_url: 'https://bank-a.example'}
+        ]}));
+        fs.writeFileSync(path.join(cwd, 'data/work/analysis-state.json'), JSON.stringify({rows: [
+            {lp: 1, institution_id: 'bank_a', review_status: 'unchecked', qualifies: null}
+        ]}));
+        fs.writeFileSync(path.join(cwd, 'data/work/automation-state.json'), JSON.stringify({tasks: [
+            {lp: 1, institution_id: 'bank_a', run_id: 'run-review', stage: 'prepared', attempt_count: 1}
+        ]}));
+        fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify({
+            schema_version: '1.0', run_id: 'run-review', institution_ids: ['bank_a'], lps: [1], mode: 'fresh', status: 'prepared'
+        }));
+        fs.writeFileSync(path.join(runDir, 'row-updates/lp-001.json'), JSON.stringify({
+            run_id: 'run-review', lp: 1, institution_id: 'bank_a', review_status: 'checked', checked_at: '2026-08-04',
+            website_available: true, qualifies: false,
+            qualification: {non_qualification_reason_codes: ['no_refinance_or_repayment_confirmed']}
+        }));
+
+        execFileSync(node, [
+            path.join(skillRoot, 'tools/review-batch.mjs'),
+            '--mode', 'all',
+            '--run-manifest', path.join(runDir, 'manifest.json'),
+            '--limit', '1'
+        ], {cwd, encoding: 'utf8', env: toolEnv(cwd)});
+
+        expect(readJson(path.join(runDir, 'analysis-state.json')).rows[0].review_status).toBe('checked');
+        expect(readJson(path.join(runDir, 'automation-state.json')).tasks[0].stage).toBe('checked');
+        expect(readJson(path.join(cwd, 'data/work/analysis-state.json')).rows[0].review_status).toBe('unchecked');
+        expect(readJson(path.join(cwd, 'data/work/automation-state.json')).tasks[0].stage).toBe('prepared');
+
+        fs.writeFileSync(path.join(runDir, 'analysis-state.json'), JSON.stringify({rows: [
+            {lp: 1, institution_id: 'bank_a', review_status: 'unchecked', qualifies: null}
+        ]}));
+        fs.writeFileSync(path.join(runDir, 'automation-state.json'), JSON.stringify({tasks: [
+            {lp: 1, institution_id: 'bank_a', run_id: 'run-review', stage: 'prepared', attempt_count: 1}
+        ]}));
+        fs.writeFileSync(path.join(runDir, 'row-updates/lp-001.json'), JSON.stringify({
+            lp: 1, institution_id: 'bank_a', review_status: 'checked', checked_at: '2026-08-04',
+            website_available: true, qualifies: false,
+            qualification: {non_qualification_reason_codes: ['no_refinance_or_repayment_confirmed']}
+        }));
+        const missingRunId = JSON.parse(execFileSync(node, [
+            path.join(skillRoot, 'tools/review-batch.mjs'), '--mode', 'all', '--run-manifest', path.join(runDir, 'manifest.json'), '--limit', '1'
+        ], {cwd, encoding: 'utf8', env: toolEnv(cwd)}));
+        expect(missingRunId.needs_user_review).toBe(1);
+        expect(readJson(path.join(runDir, 'automation-state.json')).tasks[0].stage).toBe('needs_user_review');
+    });
 });

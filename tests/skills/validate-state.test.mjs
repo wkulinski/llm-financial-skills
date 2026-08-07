@@ -65,4 +65,16 @@ describe('validate-state rules', () => {
         const warnings = validateRows([row], {requireFieldEvidence: true});
         expect(warnings.filter(w => /missing field_evidence/.test(w))).toHaveLength(3);
     });
+
+    it('keeps conflicting canonical values explicit instead of silently choosing one', () => {
+        const warnings = validateRows([{
+            lp: 1,
+            institution_id: 'bank_a',
+            decision_status: 'unconfirmed',
+            qualifies: null,
+            qualification: {},
+            offer: {fixed_rate_period_years_exact: 5, fixed_rate_period_years_min: 6, fixed_rate_period_years_max: 7, rrso_exact: 0.06, rrso_min: 0.07, rrso_max: 0.08}
+        }]);
+        expect(warnings.join('\n')).toMatch(/conflicting offer values/);
+    });
 });

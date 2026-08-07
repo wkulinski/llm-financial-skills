@@ -1,0 +1,1 @@
+Use ESM imports and Node >=20. Bank-market-scan separates discovery/cache, evidence extraction, review packs, row updates, and state validation. Preserve run_id, source cache integrity, canonical/final URL metadata, and JSON/JSONL schemas. Ranking is navigation only; it must not make financial qualification decisions. Runtime artifacts belong in `data/`, not source commits.
