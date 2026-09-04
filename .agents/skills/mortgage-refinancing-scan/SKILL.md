@@ -6,7 +6,7 @@ description: Standalone contract foundation for the exact-scope mortgage refinan
 # mortgage-refinancing-scan
 
 Źródłem prawdy dla tego skilla jest
-`docs/draft/bank-market-scan-core-reboot-plan.md`. Runtime używa wyłącznie
+`docs/bank-market-scan-core-reboot-plan.md`. Runtime używa wyłącznie
 dedykowanego katalogu `data/mortgage-refinancing-scan/` i nie korzysta z
 legacy decision state.
 

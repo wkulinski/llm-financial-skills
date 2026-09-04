@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import {spawnSync} from "node:child_process";
 
-import {afterEach, describe, expect, it} from "vitest";
+import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
 
 import {buildEvidenceForLiveEntry} from "../../.agents/skills/mortgage-refinancing-scan/lib/evidence.mjs";
 import {discoverLiveEntry, fetchLiveEntrySources, rankAdaptiveCandidates} from "../../.agents/skills/mortgage-refinancing-scan/lib/live-research.mjs";
@@ -25,6 +25,30 @@ let sequence = 0;
 
 describe("mortgage-refinancing-scan Phase 5 controlled run", () => {
     let pointerBefore;
+
+    beforeAll(() => {
+        pointerBefore = readOptional(path.join(PUBLISHED_ROOT, "current.json"));
+        if (fs.existsSync(RUNS_ROOT)) {
+            for (const entry of fs.readdirSync(RUNS_ROOT, {withFileTypes: true})) {
+                if (entry.isDirectory()) {
+                    fs.rmSync(path.join(RUNS_ROOT, entry.name), {recursive: true, force: true});
+                }
+            }
+        }
+        fs.rmSync(PHASE5_CACHE_ROOT, {recursive: true, force: true});
+    });
+
+    afterAll(() => {
+        for (const runId of activeRuns) {
+            fs.rmSync(path.join(RUNS_ROOT, runId), {recursive: true, force: true});
+            fs.rmSync(path.join(PUBLISHED_ROOT, runId), {recursive: true, force: true});
+        }
+        activeRuns.clear();
+        fs.rmSync(PHASE5_CACHE_ROOT, {recursive: true, force: true});
+        if (pointerBefore !== undefined) {
+            restoreOptional(path.join(PUBLISHED_ROOT, "current.json"), pointerBefore);
+        }
+    });
 
     afterEach(() => {
         for (const runId of activeRuns) {

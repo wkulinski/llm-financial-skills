@@ -23,6 +23,8 @@ docs/HANDOFF.md
 /.agents/skills/*
 !/.agents/skills/bank-market-scan/
 !/.agents/skills/bank-market-scan/**
+!/.agents/skills/bs-remortgaging-scan/
+!/.agents/skills/bs-remortgaging-scan/**
 !/.agents/skills/mortgage-refinancing-scan/
 !/.agents/skills/mortgage-refinancing-scan/**
 
@@ -30,3 +32,4 @@ docs/HANDOFF.md
 !/.opencode/agents/bank-market-scan-runner.md
 !/.opencode/agents/bank-market-url-ranker.md
 !/.opencode/agents/mortgage-refinancing-scan-runner.md
+/docs/plans/

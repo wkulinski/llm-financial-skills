@@ -1,0 +1,13 @@
+{
+    "name": "bs-remortgaging-scan",
+    "version": "1.0.0",
+    "description": "Standalone BS remortgaging Parallel Search Extract Luna pilot.",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "check": "node --check lib/metadata-prefilter.mjs && node --check lib/parallel-search-pilot.mjs && node --check lib/parallel-extract-pilot.mjs && node --check lib/parallel-review-classifier-pilot.mjs && node --check tools/parallel-search-pilot.mjs && node --check tools/parallel-extract-pilot.mjs && node --check tools/parallel-review-classifier-pilot.mjs"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

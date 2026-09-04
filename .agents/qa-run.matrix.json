@@ -13,6 +13,7 @@
       "patterns": [],
       "commands": [
         "npm --prefix .agents/skills/bank-market-scan run check",
+        "npm --prefix .agents/skills/bs-remortgaging-scan run check",
         "npm --prefix .agents/skills/mortgage-refinancing-scan run check"
       ],
       "runOn": ["full"],
@@ -28,6 +29,7 @@
       "patterns": [".agents/skills/**", ".opencode/agents/**"],
       "commands": [
         "npm --prefix .agents/skills/bank-market-scan run check",
+        "npm --prefix .agents/skills/bs-remortgaging-scan run check",
         "npm --prefix .agents/skills/mortgage-refinancing-scan run check",
         "npm test",
         "npm run test:integration"

@@ -1,6 +1,6 @@
 {
     "schemaVersion": 6,
-    "generatedAt": "2026-08-04T10:05:47.553Z",
+    "generatedAt": "2026-09-04T12:23:24.719Z",
     "agents": [
         "codex"
     ],
@@ -10,7 +10,7 @@
     "sources": {
         "https://github.com/wkulinski/llm-skills": {
             "mode": "explicit",
-            "listedAt": "2026-08-04T10:05:43.712Z",
+            "listedAt": "2026-09-04T12:23:20.315Z",
             "skillEntries": [
                 {
                     "name": "agent-cache-clear",
@@ -45,7 +45,9 @@
                         ".agents/skills/_shared/references/repository-context-scout-playbook.md",
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/skill-routing-policy.md",
                         ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                        ".agents/skills/_shared/scripts/artifact-path.mjs",
                         ".agents/skills/_shared/scripts/context-criteria.mjs",
                         ".agents/skills/_shared/scripts/context-handoff.mjs",
                         ".agents/skills/_shared/scripts/context-manifest.mjs",
@@ -53,10 +55,12 @@
                         ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
                         ".agents/skills/_shared/scripts/context-scout-report.mjs",
                         ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/read-purpose.mjs",
+                        ".agents/skills/_shared/scripts/secret-detector.mjs",
                         ".agents/skills/_shared/scripts/targeted-check-decision.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "9315246508f820a937ab8b30f5e130ecf8c0135cb263640208ea088c2034b0fb",
+                        "treeSha256": "13c6f59061bfabd35d0618601efdde100262926d85b998bc68edf42506fcfe11",
                         "files": [
                             {
                                 "path": "scripts/change-inspect.mjs",
@@ -64,7 +68,7 @@
                             },
                             {
                                 "path": "scripts/state-clear.mjs",
-                                "sha256": "c3bc1c202552b382cf1dedac5ff77fed13d063d530a6d89d7df623f90e5cb456"
+                                "sha256": "8f0b320b61672a4547239154ac1b1efc7f16fcd62a8389d888abfca0764e3c6e"
                             },
                             {
                                 "path": "scripts/state-init.mjs",
@@ -76,15 +80,36 @@
                             },
                             {
                                 "path": "scripts/state-readlog.mjs",
-                                "sha256": "8588dca8559360069f16e346045f740af3a2cdd6a1a88cdb63e0eb66c5bde917"
+                                "sha256": "47646859e88a9d9dd2129e1c9f9a6e334fe8f94f381476cb263bdbb42e3f3302"
                             },
                             {
                                 "path": "scripts/state-utils.mjs",
-                                "sha256": "ca9777cfae26b962f65eb9af7921bf7056b3808980fd830674e731e30c57d8f2"
+                                "sha256": "03c7c4925a05c463c8e13cc12acfbc8c57e6ed202cac8c75ede0d669a53487c6"
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "897a0b47151482c59f411c9cbc84712ee682d3653e102819828992e91b89a776"
+                                "sha256": "3905c249e2261851484da5a4f4739d3fcac972eeb62f965168d0b7e10865c238"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "code-review",
+                    "sourcePath": ".agents/skills/code-review",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/context-subagent-contract.md",
+                        ".agents/skills/_shared/references/repository-context-hybrid.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/skill-routing-policy.md",
+                        ".agents/skills/_shared/scripts/change-inventory.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "1848ddbf0699519bb2e32b0330f82ae54dece6a20270dfa2819f0c72f2a00a29",
+                        "files": [
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "306ef6a07d1a7478ef75fd860d9c03a15286d60822d38402605e627dc160e571"
                             }
                         ]
                     }
@@ -97,10 +122,11 @@
                         ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/references/runtime-quality-procedures.md",
-                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                        ".agents/skills/_shared/scripts/issue-branch.mjs",
+                        ".agents/skills/_shared/scripts/slugify-title.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "dd31290c9e751e7d2ef369f955b23e84c84bdaa8ac9e22d3d530371ee9be2f00",
+                        "treeSha256": "f38ae0bae98a1cb3a807bf291948f1942a3f3da084183520e3194e96f11338ce",
                         "files": [
                             {
                                 "path": "scripts/commit-message-render.mjs",
@@ -108,7 +134,7 @@
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "2a2cf8155c16fdfd84e02df94cd9a8b302eb0d2ad9eae5a59ae118ac2ef731e3"
+                                "sha256": "4aa66a9d93458068d13d71aad13f840cac5d937549b849ef8716a9a823888ed7"
                             }
                         ]
                     }
@@ -122,14 +148,17 @@
                         ".agents/skills/_shared/references/php-symfony-postgres-standards.md",
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/references/runtime-quality-procedures.md",
-                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md"
+                        ".agents/skills/_shared/references/symbolic-navigation-and-editing-policy.md",
+                        ".agents/skills/_shared/scripts/change-inventory.mjs",
+                        ".agents/skills/_shared/scripts/context-manifest.mjs",
+                        ".agents/skills/_shared/scripts/secret-detector.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "6135be43e85f39451b8d8fe9afb31ae0effb977368c8c5819892bb9026a2269d",
+                        "treeSha256": "3738e8af2f61344380871e73ec842b31f57c6f927c8487d67f4a356357a70645",
                         "files": [
                             {
                                 "path": "SKILL.md",
-                                "sha256": "d0b2ce612ebc211580b267bda358b5755a5890ac30aa9241c39c701d60a9534d"
+                                "sha256": "ca9b9085690af1b18c5084d26e26b6fa028c6dc3b2f4a51bd75573879439aac8"
                             }
                         ]
                     }
@@ -175,10 +204,11 @@
                     "sharedFiles": [
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/scripts/env-load.sh",
-                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                        ".agents/skills/_shared/scripts/issue-branch.mjs",
+                        ".agents/skills/_shared/scripts/slugify-title.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "647e5ee7346cf36f09ec8f871002c7c7b846d732fd0dfa24a582c3142d3c0e60",
+                        "treeSha256": "6bae1c87de9e0b0e27db0a008309ef919dd4bf788cee1dfaa8cc350887e95e63",
                         "files": [
                             {
                                 "path": "scripts/finish.mjs",
@@ -186,7 +216,7 @@
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "07ff19fb4a6673811fb700515ae7fc2605d609b7a9e558e43eaafd71408097ba"
+                                "sha256": "5d2f11a5ba994cfc2e4af3168aa7fb1d64c1cc46c4008a4a98cdcadba985d95f"
                             }
                         ]
                     }
@@ -197,10 +227,11 @@
                     "sharedFiles": [
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/scripts/env-load.sh",
-                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                        ".agents/skills/_shared/scripts/issue-branch.mjs",
+                        ".agents/skills/_shared/scripts/slugify-title.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "605870024f5361e2b12d3edbe1fa75575a23b944ce737af405aaefa2cf6bcab1",
+                        "treeSha256": "657d39fb2eaaf74a6f1d1970ce7dac37c7a552a705c525282270bc7d7520c140",
                         "files": [
                             {
                                 "path": "scripts/branch-preparation.mjs",
@@ -208,11 +239,11 @@
                             },
                             {
                                 "path": "scripts/start.mjs",
-                                "sha256": "eee678503f1c9afd15668a303d70c4dcefb037bd62b974f0e0b1ee2f09d4be82"
+                                "sha256": "3d96332d2784d4453e80e780b4d408889e9404c6e1e8bddec9bfd486ec5c0360"
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "690db622d351e1a886e77bf14b473d369de7f63d47bdec7282d71f3602d242ec"
+                                "sha256": "c1f328b4b85b3ff61e0ff9ab8f9a9e3e758d98ed0a5d98f58acb8b195efb19b0"
                             }
                         ]
                     }
@@ -223,10 +254,11 @@
                     "sharedFiles": [
                         ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                         ".agents/skills/_shared/scripts/env-load.sh",
-                        ".agents/skills/_shared/scripts/issue-branch.mjs"
+                        ".agents/skills/_shared/scripts/issue-branch.mjs",
+                        ".agents/skills/_shared/scripts/slugify-title.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "a6d2db08674d7087981c585ab4326373407723ca71c6c6fca099838889e17147",
+                        "treeSha256": "9419bb855d450af41f8dcba1d010c893dd85059c7fab658f3b7c7ccc67deaf54",
                         "files": [
                             {
                                 "path": "scripts/set-status.mjs",
@@ -234,7 +266,7 @@
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "82600bcb5941f37282f6669f66e4907343bfddbb7b7c947b32d640bc64e519a2"
+                                "sha256": "4cd932bd3b23c7c92ae96e67a4bb0393bed8f1a30a910d690b26e73e8c50a123"
                             }
                         ]
                     }
@@ -249,7 +281,7 @@
                         ".agents/skills/_shared/references/runtime-quality-procedures.md"
                     ],
                     "hash": {
-                        "treeSha256": "f679115ba9bb33dd0684a726d29d2a897e85c269eddea1ee761faecb017d6e49",
+                        "treeSha256": "ea6f4f5b50940d485cb8762f3659af9628918dcd33cad65fd03aa3bc29b7d9a7",
                         "files": [
                             {
                                 "path": "scripts/snapshot-clean.mjs",
@@ -257,7 +289,7 @@
                             },
                             {
                                 "path": "scripts/snapshot-tools.mjs",
-                                "sha256": "f0b2c0587b696890aadda89d38721f26ec512a1dae0b8b44593303a671519ada"
+                                "sha256": "21c684f35e2118922ea143f19aee13bd21cd701a8762a37258f1037e00a6b3cf"
                             },
                             {
                                 "path": "scripts/staging-sanity.mjs",
@@ -265,7 +297,7 @@
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "67d4f9c3bd1e78472d2e71edb5460c7f31de2c1358d29655b74bf00ea31d7a7f"
+                                "sha256": "cb270588848969e4aa5da019878790784dd777f32f31180efbe48011ebe81c93"
                             }
                         ]
                     }
@@ -282,6 +314,31 @@
                             {
                                 "path": "SKILL.md",
                                 "sha256": "b4dbe5206f98c1d1f1bfb1ec77cf88d6c141adfafbbe979258332575ae8d60d9"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "plan-execute",
+                    "sourcePath": ".agents/skills/plan-execute",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/skill-routing-policy.md",
+                        ".agents/skills/_shared/scripts/model-hierarchy.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "ad5b4a0d930de363843a19dde2aee606dd3c813203ca70f60d2246f738d7b034",
+                        "files": [
+                            {
+                                "path": "model-hierarchy.json.dist",
+                                "sha256": "453c27d5936ee438cac325df0a5ee2052befe9b8bde7d1887b238c18b2303bef"
+                            },
+                            {
+                                "path": "scripts/execute.mjs",
+                                "sha256": "4671a573b9fd99c561d9addc3597af0f643b6a0f52d08872b492136edf3084a6"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "5d391b997ba60e894760ffeb540ff1d5d45645ae77e607b3fb8bbe89dafd1d12"
                             }
                         ]
                     }
@@ -460,76 +517,127 @@
                             }
                         ]
                     }
+                },
+                {
+                    "name": "task-plan",
+                    "sourcePath": ".agents/skills/task-plan",
+                    "sharedFiles": [
+                        ".agents/skills/_shared/references/context-subagent-contract.md",
+                        ".agents/skills/_shared/references/repository-context-hybrid.md",
+                        ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
+                        ".agents/skills/_shared/references/runtime-quality-procedures.md",
+                        ".agents/skills/_shared/references/skill-routing-policy.md",
+                        ".agents/skills/_shared/scripts/artifact-path.mjs",
+                        ".agents/skills/_shared/scripts/context-criteria.mjs",
+                        ".agents/skills/_shared/scripts/context-handoff.mjs",
+                        ".agents/skills/_shared/scripts/context-manifest.mjs",
+                        ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
+                        ".agents/skills/_shared/scripts/context-scout-report.mjs",
+                        ".agents/skills/_shared/scripts/env-load.sh",
+                        ".agents/skills/_shared/scripts/model-hierarchy.mjs",
+                        ".agents/skills/_shared/scripts/read-purpose.mjs",
+                        ".agents/skills/_shared/scripts/secret-detector.mjs",
+                        ".agents/skills/_shared/scripts/slugify-title.mjs"
+                    ],
+                    "hash": {
+                        "treeSha256": "bd774173985a65f2423ae100e84e9f87371ac3603a2123a071b0dd442a420a68",
+                        "files": [
+                            {
+                                "path": "scripts/atomic-file.mjs",
+                                "sha256": "f08a69d0f16db7c8b5d0667dcc59acd0ee3dd10b42e41b20a0b7666bb849dc08"
+                            },
+                            {
+                                "path": "scripts/edit.mjs",
+                                "sha256": "d5ad687a76a8c22abb690038683cc8aac9ba830dea80a6c52056f7d094d18e3f"
+                            },
+                            {
+                                "path": "scripts/source.mjs",
+                                "sha256": "fa2f5127b7fcb12ba33d06d1a33c0079915a51d68af74f96bff44ced8a45fb87"
+                            },
+                            {
+                                "path": "scripts/store.mjs",
+                                "sha256": "bef0a83c4ea46be57bfe07a50a6575b42e35c3a3554df533a0d271b30272f997"
+                            },
+                            {
+                                "path": "scripts/validate.mjs",
+                                "sha256": "1401b3d6e1fc56496fed3e8f4b3620449611997efc5dd14805a8ddeff7f071aa"
+                            },
+                            {
+                                "path": "SKILL.md",
+                                "sha256": "5a434ee320396e66b3390cfedfd5a73f7fdf582c2564fccc3e3d1685ca686c81"
+                            }
+                        ]
+                    }
                 }
             ],
             "subagentEntries": [
                 {
                     "name": "context-refresher",
-                    "sourcePath": ".opencode/agent/context-refresher.md",
+                    "sourcePath": ".opencode/agents/context-refresher.md",
                     "targetPath": ".opencode/agents/context-refresher.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "345a526c472a6ed9e65e38a4dbb1922d2b917733915194a180e20be2c916afc6",
+                        "sha256": "3b62eb5f7c88f3215101657af0bf12481a2cec308cf6a84b321d57ca0743fc23",
                         "executable": false
                     }
                 },
                 {
                     "name": "context-scout",
-                    "sourcePath": ".opencode/agent/context-scout.md",
+                    "sourcePath": ".opencode/agents/context-scout.md",
                     "targetPath": ".opencode/agents/context-scout.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "f3ee0bc18119debdb21164d6941026537aa445b15c4083ce1125d6fccd186c60",
+                        "sha256": "723c915661c786913529eef62ab19483cc12f640f758a9ed193847f62b5177fe",
                         "executable": false
                     }
                 },
                 {
                     "name": "context-scout-fast",
-                    "sourcePath": ".opencode/agent/context-scout-fast.md",
+                    "sourcePath": ".opencode/agents/context-scout-fast.md",
                     "targetPath": ".opencode/agents/context-scout-fast.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "bfdacafa5ba0faa827a4d0a4021ebcaaaaf6d4d22c1c725b360bd706afafa165",
+                        "sha256": "a8e553988db559691d98b960fb5393fa2fa09fd5c9318bbd5b315bfcb85735c8",
                         "executable": false
                     }
                 },
                 {
                     "name": "diff-reviewer",
-                    "sourcePath": ".opencode/agent/diff-reviewer.md",
+                    "sourcePath": ".opencode/agents/diff-reviewer.md",
                     "targetPath": ".opencode/agents/diff-reviewer.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "790fe40c12b584834b7e9169fa2089eaad856747a268079c0b1331a76ce0b127",
+                        "sha256": "490cafe00522532d54726a82a5b183c4616c3cd349a65236e552cf27bb3474de",
                         "executable": false
                     }
                 },
                 {
                     "name": "frontend-ui-engineer",
-                    "sourcePath": ".opencode/agent/frontend-ui-engineer.md",
+                    "sourcePath": ".opencode/agents/frontend-ui-engineer.md",
                     "targetPath": ".opencode/agents/frontend-ui-engineer.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "9133117b741a9184b97b34856199bd549f16a5a88a36c960a949ccc56d0cf6dd",
+                        "sha256": "aed5d8875440a73f7d912afc766001ff1ee6d76ed65a3be8a162dd219cbd956d",
                         "executable": false
                     }
                 },
                 {
                     "name": "implementation-worker",
-                    "sourcePath": ".opencode/agent/implementation-worker.md",
+                    "sourcePath": ".opencode/agents/implementation-worker.md",
                     "targetPath": ".opencode/agents/implementation-worker.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "d1a5ad6cfb68e6ae67a4e4c0000a014e17cd0c240c534d51996ef4f6e8d46d90",
+                        "sha256": "7f8b5224e1772650a62ebc630c30bca61d93380dd631f87969a0c523b94b72e1",
                         "executable": false
                     }
                 },
                 {
                     "name": "runtime-diagnostician",
-                    "sourcePath": ".opencode/agent/runtime-diagnostician.md",
+                    "sourcePath": ".opencode/agents/runtime-diagnostician.md",
                     "targetPath": ".opencode/agents/runtime-diagnostician.md",
                     "sharedFiles": [],
                     "hash": {
-                        "sha256": "333e01fb35f73064be95e1c929dc9cec6bf9f37c81411b74bd8094790f517782",
+                        "sha256": "8e96c3fface62daab527ee5368c64967f5542d164be5f13dac432d3639814bf4",
                         "executable": false
                     }
                 }
@@ -539,7 +647,7 @@
                     "sourcePath": ".agents/skills/_shared/references/context-scout-report-protocol.md",
                     "targetPath": ".agents/skills/_shared/references/context-scout-report-protocol.md",
                     "hash": {
-                        "sha256": "04f5300349afb410b564714239298302ce299591df9555dc7b3599a7543f4390",
+                        "sha256": "90ef5a4cc30c6704ab528811903167f7d0f92bd2401236401027e6167df27e39",
                         "executable": false
                     },
                     "owners": [
@@ -550,12 +658,14 @@
                     "sourcePath": ".agents/skills/_shared/references/context-subagent-contract.md",
                     "targetPath": ".agents/skills/_shared/references/context-subagent-contract.md",
                     "hash": {
-                        "sha256": "56b4d60ac5da815bbcd95453951478ab86470310f6cd56410060ede301ccd7fa",
+                        "sha256": "70b1fe68c604d582e6ec6f8d6bc099f0535ad34f2dff7c7c77ecc0584b0e73b6",
                         "executable": false
                     },
                     "owners": [
                         "skill:code-implement",
-                        "skill:context-refresh"
+                        "skill:code-review",
+                        "skill:context-refresh",
+                        "skill:task-plan"
                     ]
                 },
                 {
@@ -595,18 +705,20 @@
                     "sourcePath": ".agents/skills/_shared/references/repository-context-hybrid.md",
                     "targetPath": ".agents/skills/_shared/references/repository-context-hybrid.md",
                     "hash": {
-                        "sha256": "971bf1f02ab0a4979cc21ee401c32ac667106784fb8657bbb7e676a3481123c6",
+                        "sha256": "a6a070fa27da86215cc4e94404866bc37e64066958c45484fb37cdd0a2009442",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:code-review",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/references/repository-context-scout-playbook.md",
                     "targetPath": ".agents/skills/_shared/references/repository-context-scout-playbook.md",
                     "hash": {
-                        "sha256": "22632a75925e81e18ce20dc0247f25002eafab002b25fa6080ffe48a3ef4a558",
+                        "sha256": "bc5219b9e3ec03be5d8bb3ebec76c87c6d2e8de1a49d56c3094fa8c5852807d2",
                         "executable": false
                     },
                     "owners": [
@@ -617,12 +729,13 @@
                     "sourcePath": ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                     "targetPath": ".agents/skills/_shared/references/runtime-collaboration-guidelines.md",
                     "hash": {
-                        "sha256": "b56b809805c62672ab93afdefc62da8c191d05031b96770233eb73efa710e131",
+                        "sha256": "7e2ae0bd65ae517a54d38925c956b4b764e4efc1fc81d6656f66d1996f514e40",
                         "executable": false
                     },
                     "owners": [
                         "skill:agent-cache-clear",
                         "skill:code-implement",
+                        "skill:code-review",
                         "skill:commit-message-write",
                         "skill:context-refresh",
                         "skill:docs-sync",
@@ -635,23 +748,40 @@
                         "skill:qa-run",
                         "skill:review-quick",
                         "skill:rules-sync",
-                        "skill:skills-index-refresh"
+                        "skill:skills-index-refresh",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/references/runtime-quality-procedures.md",
                     "targetPath": ".agents/skills/_shared/references/runtime-quality-procedures.md",
                     "hash": {
-                        "sha256": "2599abf33c0a686eb2a46da0773c00cf6d434dae28c58c0f4502d493447dc487",
+                        "sha256": "a8b1a4f540dcc1a5473bab9160c1bc7d91ca71b8bd20b32b774dd4c286916aad",
                         "executable": false
                     },
                     "owners": [
                         "skill:code-implement",
+                        "skill:code-review",
                         "skill:commit-message-write",
                         "skill:context-refresh",
                         "skill:docs-sync",
                         "skill:git-commit",
-                        "skill:rules-sync"
+                        "skill:rules-sync",
+                        "skill:task-plan"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/references/skill-routing-policy.md",
+                    "targetPath": ".agents/skills/_shared/references/skill-routing-policy.md",
+                    "hash": {
+                        "sha256": "14ee359286cc38d4e74fe51f3b5b28f37a2057096a15301ab95a2ee303d76b5a",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:code-review",
+                        "skill:plan-execute",
+                        "skill:task-plan"
                     ]
                 },
                 {
@@ -669,54 +799,83 @@
                     ]
                 },
                 {
-                    "sourcePath": ".agents/skills/_shared/scripts/context-criteria.mjs",
-                    "targetPath": ".agents/skills/_shared/scripts/context-criteria.mjs",
+                    "sourcePath": ".agents/skills/_shared/scripts/artifact-path.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/artifact-path.mjs",
                     "hash": {
-                        "sha256": "cbb0fccec16e71c7482b068bc19159cfea4ef0601e16b862d663df9f8c567f33",
+                        "sha256": "8b8de2be98670e2feba850771717acbe27f074fe0db3ee0683c0380bcf4affab",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:task-plan"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/change-inventory.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/change-inventory.mjs",
+                    "hash": {
+                        "sha256": "2d5631ff262274e34e5a5ee0132a40e5eb9602ca3ebd404d48b30837557c0795",
+                        "executable": true
+                    },
+                    "owners": [
+                        "skill:code-review",
+                        "skill:context-refresh"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/context-criteria.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/context-criteria.mjs",
+                    "hash": {
+                        "sha256": "fc098940d64caaf94dc39e9155f94f068f3c756ca6ef36e79057551a48c20574",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/scripts/context-handoff.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/context-handoff.mjs",
                     "hash": {
-                        "sha256": "ba0684ebf0b37107eabb95124c5e464b1b27fdb5786427c4dbf056d60b33a98a",
+                        "sha256": "ddd7b53e4f5d1f4e290bf32397c4b7c028fe88e73b7e7e0834b4629e163c5f3d",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/scripts/context-manifest.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/context-manifest.mjs",
                     "hash": {
-                        "sha256": "6135a0cd9008a829cc28507df8aec959832ecb16e256c2e582129204a99726a4",
+                        "sha256": "c1d2e51645bf1972ac37012c972cbce2b0a2be95fcddacd2f5f52cf07db4c7f6",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:context-refresh",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/context-scout-hybrid-run.mjs",
                     "hash": {
-                        "sha256": "98f3f13fda2b10b69fdeca1a4aff5d09b7286851aef7052d9270f749b6672ef8",
+                        "sha256": "0cb5bc6ad143a4c4bdfbc6038ff93bbe670bcf2007eb8a74b4b72bff6b3afc43",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/context-scout-report-builder.mjs",
                     "hash": {
-                        "sha256": "cc0c25c14fe3e80e6d9154fb9cc7ce3d9552d76e330f561a34890c8734058d28",
+                        "sha256": "73ddd888536ae7622116efc580a2f98644550841d20cca31c22a56ae07d1cc2c",
                         "executable": false
                     },
                     "owners": [
@@ -727,11 +886,12 @@
                     "sourcePath": ".agents/skills/_shared/scripts/context-scout-report.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/context-scout-report.mjs",
                     "hash": {
-                        "sha256": "d61c7d8d0f29762c0e7ebe52bf55db5df0c5297f2ed7764b313914a96f424a06",
+                        "sha256": "5df355ebfda59618a878f05ba148f73d15067259e3f987ab1f45b0e9dc18822a",
                         "executable": false
                     },
                     "owners": [
-                        "skill:code-implement"
+                        "skill:code-implement",
+                        "skill:task-plan"
                     ]
                 },
                 {
@@ -747,14 +907,15 @@
                         "skill:gh-issue-review",
                         "skill:gh-issue-start",
                         "skill:gh-issue-status-set",
-                        "skill:review-quick"
+                        "skill:review-quick",
+                        "skill:task-plan"
                     ]
                 },
                 {
                     "sourcePath": ".agents/skills/_shared/scripts/issue-branch.mjs",
                     "targetPath": ".agents/skills/_shared/scripts/issue-branch.mjs",
                     "hash": {
-                        "sha256": "4c614d6d82459554c8a2b6db4d11312ef8c6ef7d4e259c4d852011f6607fb213",
+                        "sha256": "0bd0942c37b323eebec8403287fbfd35325c70e468c58d2118058d751b1d6300",
                         "executable": false
                     },
                     "owners": [
@@ -762,6 +923,58 @@
                         "skill:gh-issue-review",
                         "skill:gh-issue-start",
                         "skill:gh-issue-status-set"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/model-hierarchy.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/model-hierarchy.mjs",
+                    "hash": {
+                        "sha256": "1aef67383e49e504ee1d84face6808ae4e034229071e805ff759e0f273fc232a",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:plan-execute",
+                        "skill:task-plan"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/read-purpose.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/read-purpose.mjs",
+                    "hash": {
+                        "sha256": "72cd70b25f1a508c1fb5cefb94f1d216c39da29574897a1418860aa3de8b70d0",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:task-plan"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/secret-detector.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/secret-detector.mjs",
+                    "hash": {
+                        "sha256": "114a81d2b1be95b29fd3ff0060b37a31ddd0da9cef381f465b9aaece6bb9b681",
+                        "executable": false
+                    },
+                    "owners": [
+                        "skill:code-implement",
+                        "skill:context-refresh",
+                        "skill:task-plan"
+                    ]
+                },
+                {
+                    "sourcePath": ".agents/skills/_shared/scripts/slugify-title.mjs",
+                    "targetPath": ".agents/skills/_shared/scripts/slugify-title.mjs",
+                    "hash": {
+                        "sha256": "f97629006f1a944f7f07c42975ee78a7460b50194abee217e8568a118e1bc5e7",
+                        "executable": true
+                    },
+                    "owners": [
+                        "skill:commit-message-write",
+                        "skill:gh-issue-review",
+                        "skill:gh-issue-start",
+                        "skill:gh-issue-status-set",
+                        "skill:task-plan"
                     ]
                 },
                 {
@@ -780,9 +993,9 @@
                 "requestedRef": null,
                 "defaultBranch": "master",
                 "resolvedRef": "master",
-                "resolvedCommit": "eb3e853e29195b67af96eba89719f2d1a560f07b",
+                "resolvedCommit": "f1d1f64fb775816ddc0cc7be7af18c1f2cdf8490",
                 "subpath": null,
-                "resolvedAt": "2026-08-04T10:05:43.696Z"
+                "resolvedAt": "2026-09-04T12:23:20.297Z"
             }
         }
     }

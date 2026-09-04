@@ -6,6 +6,7 @@
     "private": true,
     "workspaces": [
         ".agents/skills/bank-market-scan",
+        ".agents/skills/bs-remortgaging-scan",
         ".agents/skills/mortgage-refinancing-scan"
     ],
     "scripts": {

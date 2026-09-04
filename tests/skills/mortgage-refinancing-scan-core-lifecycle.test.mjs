@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import {spawn, spawnSync} from 'node:child_process';
-import {afterEach, beforeEach, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 import {
     loadRun,
     replayRun
@@ -27,9 +27,29 @@ const MATRIX_PATH = path.join(ROOT, '.agents/skills/mortgage-refinancing-scan/te
 const SOURCE_ID = `src-${'a'.repeat(24)}`;
 let sequence = 0;
 let activeRunId;
-let pointerBefore;
 
 describe('mortgage-refinancing-scan Phase 2 core lifecycle', () => {
+    let pointerBefore;
+
+    beforeAll(() => {
+        pointerBefore = readOptional(path.join(PUBLISHED_ROOT, 'current.json'));
+        if (fs.existsSync(RUNS_ROOT)) {
+            for (const entry of fs.readdirSync(RUNS_ROOT, {withFileTypes: true})) {
+                if (entry.isDirectory()) {
+                    fs.rmSync(path.join(RUNS_ROOT, entry.name), {recursive: true, force: true});
+                }
+            }
+        }
+    });
+
+    afterAll(() => {
+        if (activeRunId) {
+            cleanupRunArtifacts(activeRunId);
+            activeRunId = undefined;
+        }
+        restoreOptional(path.join(PUBLISHED_ROOT, 'current.json'), pointerBefore);
+    });
+
     beforeEach(() => {
         pointerBefore = readOptional(path.join(PUBLISHED_ROOT, 'current.json'));
     });
