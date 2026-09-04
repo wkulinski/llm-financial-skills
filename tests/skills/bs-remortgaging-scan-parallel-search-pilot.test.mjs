@@ -16,10 +16,10 @@ import {
     normalizeRegistry,
     runPilot,
     selectSample
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-search-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-search-pilot.mjs";
 
 const ROOT = path.resolve(new URL("../..", import.meta.url).pathname);
-const TOOL = path.join(ROOT, ".agents/skills/mortgage-refinancing-scan/tools/parallel-search-pilot.mjs");
+const TOOL = path.join(ROOT, ".agents/skills/bs-remortgaging-scan/tools/parallel-search-pilot.mjs");
 
 const tmpDirs = new Set();
 
@@ -53,7 +53,7 @@ function mockSearchFetch() {
             return new Response(JSON.stringify({
                 search_id: "s-1",
                 results: [
-                    {url: "https://www.bank1.pl/refinansowanie?b=2&a=1#top", title: "Refinansowanie", publish_date: "2026-07-01", excerpts: ["fragment A"]},
+                    {url: "https://www.bank1.pl/refinansowanie?b=2&a=1#top", title: "Refinansowanie", description: "Spłata kredytu z innego banku", publish_date: "2026-07-01", excerpts: ["fragment A"]},
                     {url: "https://bank1.pl/refinansowanie?a=1&b=2", title: "Refinansowanie bez www", publish_date: "2026-07-01", excerpts: ["fragment A"]},
                     {url: "https://bank1.pl/refinansowanie?b=2&a=1#glowna", title: "Refinansowanie dup", publish_date: "2026-07-01", excerpts: ["fragment A"]},
                     {url: "http://www.bank1.pl/refinansowanie?a=1&b=2", title: "Refinansowanie po http", publish_date: "2026-07-01", excerpts: ["fragment A"]},
@@ -182,6 +182,7 @@ describe("parallel-search-pilot discovery pilot", () => {
             domain_match: true,
             canonical_url: "https://www.bank1.pl/refinansowanie?a=1&b=2",
             title: "Refinansowanie",
+            description: "Spłata kredytu z innego banku",
             publish_date: "2026-07-01",
             excerpts: ["fragment A"]
         });

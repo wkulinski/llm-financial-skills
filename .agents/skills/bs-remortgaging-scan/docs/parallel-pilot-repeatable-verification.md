@@ -1,7 +1,7 @@
 # Powtarzalna weryfikacja pilota Parallel Search → Extract → Luna follow-up
 
-> **Status:** eksperymentalny, izolowany pilot. Ten runbook nie jest częścią
-> domyślnego produkcyjnego lifecycle `mortgage-refinancing-scan`.
+> **Status:** niezależny pilot. Ten runbook jest źródłem prawdy
+> dla weryfikacji pilota `bs-remortgaging-scan`.
 
 ## Cel
 
@@ -15,8 +15,10 @@ jawnych `source_id`; trzecia runda nie istnieje.
 
 Źródłem prawdy dla zachowania testowego są aktualne implementacje i testy:
 
-- `.agents/skills/mortgage-refinancing-scan/lib/parallel-extract-pilot.mjs`;
-- `.agents/skills/mortgage-refinancing-scan/lib/parallel-review-classifier-pilot.mjs`;
+- `.agents/skills/bs-remortgaging-scan/lib/parallel-search-pilot.mjs`;
+- `.agents/skills/bs-remortgaging-scan/lib/metadata-prefilter.mjs`;
+- `.agents/skills/bs-remortgaging-scan/lib/parallel-extract-pilot.mjs`;
+- `.agents/skills/bs-remortgaging-scan/lib/parallel-review-classifier-pilot.mjs`;
 - odpowiadające im pliki `tests/skills/*parallel*pilot.test.mjs`.
 
 Instrukcja nie zatwierdza live API calls. Search, Extract lub model można uruchomić
@@ -32,7 +34,7 @@ live wyłącznie po jawnym poleceniu użytkownika obejmującym kosztowy przebieg
 3. Przed przebiegiem należy zapisać dokładny zakres, wejścia, model, reasoning,
    limity kosztu/czasu, polecenia i wersję `HEAD` w manifeście sesji.
 4. Wszystkie artefakty sesji trafiają do nowego katalogu pod
-   `var/agent/cache/mortgage-refinancing-scan/`; istniejących artefaktów nie wolno
+   `var/agent/cache/bs-remortgaging-scan/`; istniejących artefaktów nie wolno
    nadpisywać.
 5. Existing 20-bank adjudicated corpus jest zbiorem regresyjnym/development,
    a nie niezależnym holdoutem. Wynik na nim nie może być raportowany jako
@@ -47,8 +49,12 @@ live wyłącznie po jawnym poleceniu użytkownika obejmującym kosztowy przebieg
 9. Jedną ofertę mogą wspierać tylko strona produktu i dokumenty bezpośrednio z
    niej podlinkowane, wybrane przez Lunę i pobrane w jednej bounded rundzie.
 10. Scored PASS/FAIL wymaga jednego autorytatywnego gold setu zgodnego z
-    offer-level kontraktem. Niespójne adjudykacje blokują ocenę liczbową, ale nie
-    blokują technicznego wykonania i raportu diagnostycznego.
+     offer-level kontraktem. Niespójne adjudykacje blokują ocenę liczbową, ale nie
+     blokują technicznego wykonania i raportu diagnostycznego.
+11. Metadata-only preflight działa po Search i przed Extract: homepage’y oraz
+    jednoznaczny noise są audytowane bez requestu, a bank bez dedykowanego
+    kandydata otrzymuje `not_found`; nie jest to dowód braku oferty banku.
+    Preflight korzysta wyłącznie z URL/title/description.
 
 ## Tryby
 
@@ -58,9 +64,9 @@ Uruchamiany po każdej implementacji i możliwy bez API keys:
 
 ```bash
 npm test -- \
-  tests/skills/mortgage-refinancing-scan-parallel-search-pilot.test.mjs \
-  tests/skills/mortgage-refinancing-scan-parallel-extract-pilot.test.mjs \
-  tests/skills/mortgage-refinancing-scan-parallel-review-classifier-pilot.test.mjs
+  tests/skills/bs-remortgaging-scan-parallel-search-pilot.test.mjs \
+  tests/skills/bs-remortgaging-scan-parallel-extract-pilot.test.mjs \
+  tests/skills/bs-remortgaging-scan-parallel-review-classifier-pilot.test.mjs
 git diff --check
 ```
 
@@ -98,9 +104,9 @@ klasyfikację. Taki replay wymaga jawnej zgody kosztowej i mierzy
 
 Przed uruchomieniem agent musi mieć:
 
-- immutable Extract pack schema `parallel-extract-pilot/2.0.0`, wygenerowany
-  przez aktualny Extract i zawierający `direct_links` dla stron, na których ma
-  być oceniany follow-up;
+- immutable Extract pack schema `parallel-extract-pilot/2.1.0`, wygenerowany
+  przez aktualny Extract, zawierający preflight audit oraz `direct_links` dla
+  stron, na których ma być oceniany follow-up;
 - jego SHA-256;
 - dokładny model i reasoning;
 - parametry batchingu i timeout;
@@ -130,10 +136,12 @@ Raport replay zawiera co najmniej:
 - listę rozbieżności względem wskazanego baseline’u;
 - czas i koszt oraz informację, że wynik modelu nie jest deterministyczny.
 
-Historyczny schema-2 pack bez `direct_links` może służyć wyłącznie do regresji
-pierwszej rundy. Nie jest testem mechanizmu doczytywania. Pełny offline replay
-follow-upu wymagałby osobnego, zamrożonego transportu/fixture; bieżący CLI go nie
-udostępnia i instrukcja nie może sugerować, że taki test został wykonany.
+Historyczny `parallel-extract-pilot/2.0.0` pack bez `preflight`/`direct_links`
+może służyć wyłącznie do regresji pierwszej rundy poza aktualnym kontraktem.
+Nie jest testem mechanizmu doczytywania i nie przechodzi bieżącego walidatora.
+Pełny offline replay follow-upu wymagałby osobnego, zamrożonego
+transportu/fixture; bieżący CLI go nie udostępnia i instrukcja nie może
+sugerować, że taki test został wykonany.
 
 ### Tryb C — pełny live end-to-end
 
@@ -156,7 +164,8 @@ Kolejność jest stała:
 ```text
 Parallel Search
 → official-domain canonical deduplication
-→ Parallel Extract każdego głównego wyniku Search wraz z bounded `direct_links`
+→ metadata-only preflight (homepage/noise audit)
+→ Parallel Extract każdego pozostałego wyniku Search wraz z bounded `direct_links`
 → pierwsza klasyfikacja każdej strony produktu przez Lunę
 → opcjonalne `needs_more_evidence` z 1–3 istniejącymi `link_id`
 → jednorazowy Parallel Extract dokładnie wybranych bezpośrednich dokumentów
@@ -173,7 +182,8 @@ lokalnego top-k, a orkiestrator nie podąża za linkami z pobranych dokumentów.
 Raport live zawiera:
 
 - liczbę oficjalnych i unikalnych wyników Search per bank;
-- liczbę prób Extract, sukcesów, błędów i dokumentów jawnie niekompletnych;
+- liczbę kandydatów odrzuconych przez preflight, banków `not_found`, prób
+  Extract, sukcesów, błędów i dokumentów jawnie niekompletnych;
 - liczbę ofert proszących o follow-up, wskazane i faktycznie pobrane `link_id`,
   fetch errors oraz liczbę decyzji drugiej rundy;
 - rozkład decyzji Luny i bank rollup;
@@ -252,7 +262,7 @@ Code or gold modified during session: no
 ```text
 Powtórz weryfikację pilota Parallel Search → Extract → Luna z jednorundowym
 model-requested follow-upem zgodnie z
-.agents/skills/mortgage-refinancing-scan/docs/parallel-pilot-repeatable-verification.md.
+.agents/skills/bs-remortgaging-scan/docs/parallel-pilot-repeatable-verification.md.
 
 Tryb: <offline | replay-root-pack | live>.
 Baseline/root Extract pack/gold/holdout: <wskaż istniejące artefakty i SHA>.

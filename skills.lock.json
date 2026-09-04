@@ -1,6 +1,6 @@
 {
     "schemaVersion": 6,
-    "generatedAt": "2026-09-02T22:40:56.161Z",
+    "generatedAt": "2026-09-04T12:23:24.719Z",
     "agents": [
         "codex"
     ],
@@ -10,7 +10,7 @@
     "sources": {
         "https://github.com/wkulinski/llm-skills": {
             "mode": "explicit",
-            "listedAt": "2026-09-02T22:40:49.435Z",
+            "listedAt": "2026-09-04T12:23:20.315Z",
             "skillEntries": [
                 {
                     "name": "agent-cache-clear",
@@ -540,7 +540,7 @@
                         ".agents/skills/_shared/scripts/slugify-title.mjs"
                     ],
                     "hash": {
-                        "treeSha256": "09f85dfe18caedd1f4aba6cd1d6492961c53d3dfcb75ed32af2fd8b36efd70dc",
+                        "treeSha256": "bd774173985a65f2423ae100e84e9f87371ac3603a2123a071b0dd442a420a68",
                         "files": [
                             {
                                 "path": "scripts/atomic-file.mjs",
@@ -564,7 +564,7 @@
                             },
                             {
                                 "path": "SKILL.md",
-                                "sha256": "f878687771444dda7f45f4e46a174279023b330e1962a5ea45bc9ea89429c7d1"
+                                "sha256": "5a434ee320396e66b3390cfedfd5a73f7fdf582c2564fccc3e3d1685ca686c81"
                             }
                         ]
                     }
@@ -993,9 +993,9 @@
                 "requestedRef": null,
                 "defaultBranch": "master",
                 "resolvedRef": "master",
-                "resolvedCommit": "15d628ffa3f8a78f1f4bc51dda1bf4673bccd860",
+                "resolvedCommit": "f1d1f64fb775816ddc0cc7be7af18c1f2cdf8490",
                 "subpath": null,
-                "resolvedAt": "2026-09-02T22:40:49.416Z"
+                "resolvedAt": "2026-09-04T12:23:20.297Z"
             }
         }
     }

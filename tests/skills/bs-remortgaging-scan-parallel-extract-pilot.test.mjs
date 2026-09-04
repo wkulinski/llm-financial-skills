@@ -14,19 +14,20 @@ import {
     ENDPOINT,
     MAX_DIRECT_LINKS_PER_PAGE,
     MAX_SELECTED_LINKS,
+    REPORT_SCHEMA_VERSION,
     buildExtractQueries,
     buildRequestBody,
     estimateCost,
     runExtractPilot,
     runSelectedLinkExtract,
     validateBudget
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-extract-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-extract-pilot.mjs";
 import {
     canonicalIdentity
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-search-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-search-pilot.mjs";
 
 const ROOT = path.resolve(new URL("../..", import.meta.url).pathname);
-const TOOL = path.join(ROOT, ".agents/skills/mortgage-refinancing-scan/tools/parallel-extract-pilot.mjs");
+const TOOL = path.join(ROOT, ".agents/skills/bs-remortgaging-scan/tools/parallel-extract-pilot.mjs");
 
 const tmpDirs = new Set();
 
@@ -34,8 +35,8 @@ function sha256Hex(text) {
     return crypto.createHash("sha256").update(Buffer.from(text, "utf8")).digest("hex");
 }
 
-function candidate(url, title = null) {
-    return {domain_match: true, canonical_url: url, title, publish_date: null, excerpts: []};
+function candidate(url, title = null, description = null) {
+    return {domain_match: true, canonical_url: url, title, description, publish_date: null, excerpts: []};
 }
 
 function bankRecord({id, lp, name, hosts, redirectHosts = [], candidates = [], rejections = []}) {
@@ -226,8 +227,7 @@ describe("parallel-extract-pilot flat page-first extract pilot", () => {
             "https://all.pl/kredyt-hipoteczny",
             "https://all.pl/stale-oprocentowanie",
             "https://all.pl/przeniesienie",
-            "https://all.pl/oferta",
-            "https://all.pl/regulamin"
+            "https://all.pl/oferta"
         ];
         const fetchImpl = vi.fn(async (url, init) => {
             expect(url).toBe(ENDPOINT);
@@ -245,19 +245,201 @@ describe("parallel-extract-pilot flat page-first extract pilot", () => {
         expect(fetchImpl).toHaveBeenCalledTimes(1);
         const bank = pack.banks[0];
         expect(bank.submitted_urls).toEqual(expectedUrls);
-        expect(bank.pages).toHaveLength(6);
-        expect(bank.pages.map((page) => page.status)).toEqual(["ok", "ok", "ok", "ok", "ok", "ok"]);
+        expect(bank.pages).toHaveLength(5);
+        expect(bank.pages.map((page) => page.status)).toEqual(["ok", "ok", "ok", "ok", "ok"]);
+        expect(bank.preflight).toMatchObject({
+            enabled: true,
+            skipped_candidate_count: 1,
+            remaining_candidate_count: 5,
+            outcome: "continue",
+            reason: null
+        });
+        expect(bank.preflight.skipped).toEqual([expect.objectContaining({
+            url: "https://all.pl/regulamin",
+            label: "noise",
+            reason: "non_product_boilerplate"
+        })]);
         expect(bank.pages[0].url).toBe("https://www.all.pl/refinansowanie");
         expect(bank.pages[0].submitted_url).toBe("https://all.pl/refinansowanie");
         expect(pack.summary).toMatchObject({
             bank_count: 1,
-            submitted: 6,
-            extracted: 6,
+            submitted: 5,
+            preflight_excluded: 1,
+            not_found_bank_count: 0,
+            extracted: 5,
             error: 0,
             api_request_count: 1,
-            estimated_cost_usd: 0.006
+            estimated_cost_usd: 0.005
         });
         expect(typeof pack.summary.elapsed_ms).toBe("number");
+    });
+
+    it("runs metadata preflight before Extract and reports homepage-only banks as not_found", async () => {
+        const source = {
+            ...sourceFixture(),
+            banks: [
+                bankRecord({
+                    id: "bank_homepage_only",
+                    lp: 1,
+                    name: "Bank Homepage Only",
+                    hosts: ["home.pl"],
+                    candidates: [candidate("https://home.pl/", "Bank Homepage Only")]
+                }),
+                bankRecord({
+                    id: "bank_mixed",
+                    lp: 2,
+                    name: "Bank Mixed",
+                    hosts: ["mixed.pl"],
+                    candidates: [
+                        candidate("https://mixed.pl/", "Bank Mixed"),
+                        candidate("https://mixed.pl/kredyt-mieszkaniowy", "Kredyt mieszkaniowy")
+                    ]
+                })
+            ]
+        };
+        const fetchImpl = vi.fn(async (_url, init) => {
+            const body = JSON.parse(init.body);
+            expect(body.urls).toEqual(["https://mixed.pl/kredyt-mieszkaniowy"]);
+            return jsonResponse({results: body.urls.map((url) => ({url, full_content: "product", excerpts: []}))});
+        });
+
+        const pack = await runExtractPilot({sourceReport: source, apiKey: "key", fetchImpl});
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        expect(pack.preflight).toMatchObject({
+            enabled: true,
+            skipped_candidate_count: 2,
+            not_found_bank_count: 1
+        });
+        expect(pack.summary).toMatchObject({
+            submitted: 1,
+            preflight_excluded: 2,
+            not_found_bank_count: 1,
+            extracted: 1,
+            error: 0,
+            api_request_count: 1,
+            estimated_cost_usd: 0.001
+        });
+
+        expect(pack.banks[0]).toMatchObject({
+            submitted_urls: [],
+            pages: [],
+            preflight: {
+                skipped_candidate_count: 1,
+                remaining_candidate_count: 0,
+                outcome: "not_found",
+                reason: "homepage_only"
+            }
+        });
+        expect(pack.banks[0].preflight.skipped[0]).toMatchObject({
+            url: "https://home.pl/",
+            label: "noise",
+            reason: "homepage_not_product_page"
+        });
+        expect(pack.banks[1].preflight).toMatchObject({
+            skipped_candidate_count: 1,
+            remaining_candidate_count: 1,
+            outcome: "continue",
+            reason: null
+        });
+        expect(pack.banks[1].preflight.skipped[0]).toMatchObject({
+            url: "https://mixed.pl/",
+            label: "noise",
+            reason: "homepage_not_product_page"
+        });
+    });
+
+    it("does not require an API key or call Extract when preflight removes every candidate", async () => {
+        const source = {
+            ...sourceFixture(),
+            banks: [bankRecord({
+                id: "bank_homepage_only",
+                lp: 1,
+                name: "Bank Homepage Only",
+                hosts: ["home.pl"],
+                candidates: [candidate("https://home.pl/")]
+            })]
+        };
+        const fetchImpl = vi.fn();
+
+        const pack = await runExtractPilot({sourceReport: source, fetchImpl});
+
+        expect(fetchImpl).not.toHaveBeenCalled();
+        expect(pack.summary).toMatchObject({
+            submitted: 0,
+            preflight_excluded: 1,
+            not_found_bank_count: 1,
+            extracted: 0,
+            error: 0,
+            api_request_count: 0,
+            estimated_cost_usd: 0
+        });
+        expect(pack.banks[0].preflight).toMatchObject({outcome: "not_found", reason: "homepage_only"});
+    });
+
+    it("does not start Extract for a Search bank that is not available", async () => {
+        const source = {
+            ...sourceFixture(),
+            banks: [bankRecord({
+                id: "bank_search_error",
+                lp: 1,
+                name: "Bank Search Error",
+                hosts: ["error.pl"],
+                candidates: [candidate("https://error.pl/kredyt-hipoteczny")]
+            })]
+        };
+        source.banks[0].status = "error";
+        source.banks[0].candidates = [candidate("https://error.pl/kredyt-hipoteczny")];
+        const fetchImpl = vi.fn();
+
+        const pack = await runExtractPilot({sourceReport: source, apiKey: "key", fetchImpl});
+
+        expect(fetchImpl).not.toHaveBeenCalled();
+        expect(pack.banks[0]).toMatchObject({
+            submitted_urls: [],
+            pages: [],
+            preflight: {outcome: "not_run", reason: "search_not_available"}
+        });
+    });
+
+    it("applies safe metadata noise rules before Extract while protecting mortgage paths", async () => {
+        const source = {
+            ...sourceFixture(),
+            banks: [bankRecord({
+                id: "bank_metadata",
+                lp: 1,
+                name: "Bank Metadata",
+                hosts: ["metadata.pl"],
+                candidates: [
+                    candidate("https://metadata.pl/kredyt-w-rachunku-biezacym", "Kredyt w rachunku bieżącym"),
+                    candidate("https://metadata.pl/formularze/kwestionariusz.pdf", "Kwestionariusz kredytowy"),
+                    candidate("https://metadata.pl/uslugi/operacja", null, "Usługa BLIK"),
+                    candidate("https://metadata.pl/rolnicy/kredyt-1", "Kredyt 1"),
+                    candidate("https://metadata.pl/kredyt-hipoteczny", "Kredyt hipoteczny")
+                ]
+            })]
+        };
+        const fetchImpl = vi.fn(async (_url, init) => {
+            const body = JSON.parse(init.body);
+            expect(body.urls).toEqual([
+                "https://metadata.pl/kredyt-hipoteczny"
+            ]);
+            return jsonResponse({results: body.urls.map((url) => ({url, full_content: "content", excerpts: []}))});
+        });
+
+        const pack = await runExtractPilot({sourceReport: source, apiKey: "key", fetchImpl});
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+        expect(pack.banks[0].preflight.skipped_candidate_count).toBe(4);
+        expect(pack.banks[0].preflight.skipped.map((item) => item.reason)).toEqual([
+            "non_mortgage_credit_product",
+            "non_mortgage_credit_product",
+            "non_product_boilerplate",
+            "non_mortgage_credit_product"
+        ]);
+        expect(pack.banks[0].preflight.remaining_candidate_count).toBe(1);
+        expect(pack.summary.preflight_excluded).toBe(4);
+        expect(pack.summary.submitted).toBe(1);
     });
 
     it("maps http/https, www/bare and comma/%2C result variants to the correct page in submitted order and bounds content", async () => {
@@ -279,15 +461,15 @@ describe("parallel-extract-pilot flat page-first extract pilot", () => {
 
         const pack = await runExtractPilot({
             sourceReport: sourceFixture(),
-            inputPath: "var/agent/cache/mortgage-refinancing-scan/parallel-search-pilot/live-20-basic-domain-filtered.json",
+            inputPath: "var/agent/cache/bs-remortgaging-scan/parallel-search-pilot/live-20-basic-domain-filtered.json",
             apiKey: "test-key-123",
             fetchImpl
         });
 
-        expect(pack.schema_version).toBe("parallel-extract-pilot/2.0.0");
+        expect(pack.schema_version).toBe(REPORT_SCHEMA_VERSION);
         expect(pack.dry_run).toBe(false);
         expect(pack.source_report).toEqual({
-            path: "var/agent/cache/mortgage-refinancing-scan/parallel-search-pilot/live-20-basic-domain-filtered.json",
+            path: "var/agent/cache/bs-remortgaging-scan/parallel-search-pilot/live-20-basic-domain-filtered.json",
             sha256: expect.stringMatching(/^[0-9a-f]{64}$/u),
             schema_version: "parallel-search-pilot/1.0.0"
         });
@@ -704,9 +886,11 @@ describe("parallel-extract-pilot flat page-first extract pilot", () => {
         expect(dryRun.status).toBe(0);
         expect(JSON.parse(dryRun.stdout).status).toBe("dry_run");
         expect(JSON.parse(dryRun.stdout).submitted).toBe(4);
+        expect(JSON.parse(dryRun.stdout).preflight_excluded).toBe(0);
+        expect(JSON.parse(dryRun.stdout).not_found_bank_count).toBe(0);
         expect(JSON.parse(dryRun.stdout).estimated_cost_usd).toBe(0.004);
         const pack = JSON.parse(fs.readFileSync(path.join(tmpDir, "pack.json"), "utf8"));
-        expect(pack.schema_version).toBe("parallel-extract-pilot/2.0.0");
+        expect(pack.schema_version).toBe(REPORT_SCHEMA_VERSION);
         expect(pack.dry_run).toBe(true);
         expect(pack.source_report.path).toBe(inputPath);
         expect(pack.summary.submitted).toBe(4);
@@ -870,7 +1054,7 @@ describe("parallel-extract-pilot selected-link extractor", () => {
         });
 
         expect(selectedFetch).toHaveBeenCalledTimes(1);
-        expect(result.schema_version).toBe("parallel-extract-pilot/2.0.0");
+        expect(result.schema_version).toBe(REPORT_SCHEMA_VERSION);
         expect(result.mode).toBe("selected_links");
         expect(result.dry_run).toBe(false);
         expect(result.source.pages).toEqual(["https://www.a.pl/refinansowanie"]);

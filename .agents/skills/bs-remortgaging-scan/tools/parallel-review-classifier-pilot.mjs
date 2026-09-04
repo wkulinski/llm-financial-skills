@@ -22,8 +22,9 @@ import {writeJsonAtomic} from "../lib/parallel-search-pilot.mjs";
 import {runSelectedLinkExtract} from "../lib/parallel-extract-pilot.mjs";
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(TOOL_DIR, "../../..");
-const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "mortgage-refinancing-scan", "parallel-review-classifier-pilot");
+const SKILL_ROOT = path.resolve(TOOL_DIR, "..");
+const REPO_ROOT = path.resolve(SKILL_ROOT, "../../..");
+const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "bs-remortgaging-scan", "parallel-review-classifier-pilot");
 
 const VALUE_OPTIONS = new Set(["input", "output", "timeout-ms", "batch-pages", "batch-concurrency", "variant", "model", "run-dir"]);
 const FLAG_OPTIONS = new Set(["dry-run", "no-prefilter", "session-reuse"]);

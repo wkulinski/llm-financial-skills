@@ -9,14 +9,15 @@ import {
     parseArgs,
     parsePositiveInt
 } from "./parallel-search-pilot.mjs";
+import {classifyMetadataSkip, normalizeAscii} from "./metadata-prefilter.mjs";
 
-export {PilotError, formatCliError, parseArgs, parsePositiveInt};
+export {PilotError, formatCliError, normalizeAscii, parseArgs, parsePositiveInt};
 
 /**
  * Isolated Luna Max bounded review classifier pilot with one bounded
  * follow-up round.
  *
- * Reads a `parallel-extract-pilot/2.0.0` pack (flat and page-first: one
+ * Reads a `parallel-extract-pilot/2.1.0` pack (flat and page-first: one
  * entry per page record), evaluates every page independently and builds
  * deterministic prompts, partitions the global ordered items into consecutive
  * batches of at most `batchPages` items and invokes exactly `opencode run
@@ -51,7 +52,7 @@ export {PilotError, formatCliError, parseArgs, parsePositiveInt};
  * excerpts, keyword-window compaction, bundle markers, link anchors,
  * contexts, URLs and text from other pages can never satisfy or influence a
  * quote. Error/unresolved pages and pages with empty content are unresolved.
- * Only the current 2.0.0 page-first Extract schema is accepted: historical
+ * Only the current 2.1.0 page-first Extract schema is accepted: historical
  * fetch/bundle packs and Extract 1.0.0 packs are rejected on the schema
  * check, with no legacy reader or adaptation.
  *
@@ -64,7 +65,7 @@ export {PilotError, formatCliError, parseArgs, parsePositiveInt};
 
 export const REPORT_SCHEMA_VERSION = "parallel-review-classifier-pilot/3.0.0";
 export const MODEL_SCHEMA_VERSION = "parallel-review-classification-model/2.0.0";
-export const EXTRACT_SOURCE_SCHEMA_VERSION = "parallel-extract-pilot/2.0.0";
+export const EXTRACT_SOURCE_SCHEMA_VERSION = "parallel-extract-pilot/2.1.0";
 
 export const MODEL = "openai/gpt-5.6-luna";
 export const VARIANT = "high";
@@ -139,7 +140,7 @@ export function parseBatchConcurrency(name, value) {
 }
 
 /**
- * Strict structural validation of the flat `parallel-extract-pilot/2.0.0`
+ * Strict structural validation of the flat `parallel-extract-pilot/2.1.0`
  * pack: exact schema version, banks[], a stable bank object per record and a
  * pages[] array per bank whose page records carry a status string and a url
  * string. Any malformed, historical fetch/bundle or Extract 1.0.0 pack fails
@@ -162,6 +163,32 @@ export function validateExtractPack(value) {
         }
         if (!Array.isArray(record.pages)) {
             throw new PilotError("invalid_review_pack", `banks[${bankIndex}] must contain a pages[] array`, {exitCode: 10});
+        }
+        if (!isPlainObject(record.preflight)
+            || record.preflight.enabled !== true
+            || !Array.isArray(record.preflight.skipped)
+            || !Number.isInteger(record.preflight.skipped_candidate_count)
+            || record.preflight.skipped_candidate_count !== record.preflight.skipped.length
+            || !Number.isInteger(record.preflight.remaining_candidate_count)
+            || record.preflight.remaining_candidate_count < 0
+            || !["continue", "not_found", "not_run"].includes(record.preflight.outcome)
+            || (record.preflight.outcome === "continue"
+                && (record.preflight.reason !== null || record.preflight.remaining_candidate_count < 1))
+            || (record.preflight.outcome !== "continue"
+                && (typeof record.preflight.reason !== "string"
+                    || record.preflight.reason.trim() === ""
+                    || record.preflight.remaining_candidate_count !== 0))) {
+            throw new PilotError("invalid_review_pack", `banks[${bankIndex}] requires a valid preflight object`, {exitCode: 10});
+        }
+        for (const [skipIndex, skipped] of record.preflight.skipped.entries()) {
+            if (!isPlainObject(skipped)
+                || typeof skipped.url !== "string"
+                || skipped.url.trim() === ""
+                || skipped.label !== "noise"
+                || typeof skipped.reason !== "string"
+                || skipped.reason.trim() === "") {
+                throw new PilotError("invalid_review_pack", `banks[${bankIndex}].preflight.skipped[${skipIndex}] is invalid`, {exitCode: 10});
+            }
         }
         for (const [pageIndex, page] of record.pages.entries()) {
             if (!isPlainObject(page)) {
@@ -292,7 +319,7 @@ function buildPromptText(entries) {
 /**
  * Build the global ordered page entries for the whole review pack. This is a
  * page-first alias to the flat Extract adapter: the classifier only accepts
- * `parallel-extract-pilot/2.0.0` packs, so every entry is one flat page
+ * `parallel-extract-pilot/2.1.0` packs, so every entry is one flat page
  * record and legacy fetch/bundle shapes are rejected on the schema check.
  */
 export function buildPromptEntries(pack) {
@@ -307,13 +334,15 @@ export function buildPromptEntries(pack) {
  *   (the validator would force that label anyway);
  * - pages whose title and URL are both free of any credit/rate vocabulary and
  *   match an explicit non-product stem (bank boilerplate: about, contact,
- *   login, help, sitemap, corporate info, application PDF forms, test pages)
- *   are fixed to `noise`.
+ *   login, help, sitemap, corporate info, agricultural pages, application PDF
+ *   forms, test pages) are fixed to `noise`;
+ * - explicit non-mortgage credit combinations (for example account-transfer,
+ *   BLIK, agricultural, consumer, business or current-account vocabulary)
+ *   are fixed to `noise` even when generic credit vocabulary is present.
  *
- * A page is NEVER skipped when its title or URL contains a credit-related or
- * rate-related stem (kredyt, hipotec, mieszkaniow, pozyczk, finans, oprocent,
- * procent, rata, WIBOR, WIRON, RRSO, refinans, konsumpcyj, wakacje) because
- * such pages may carry qualifying evidence.
+ * Generic credit/rate vocabulary alone is never enough to skip a page. Mortgage
+ * markers (`hipotec`, `mieszkaniow`) always protect it; an explicit
+ * non-mortgage combination is required for the deterministic downgrade.
  *
  * Matching uses ASCII-normalized substring stems, not word-boundary regexes:
  * URLs never carry Polish diacritics (wladze-banku, pozyczka-hipoteczna) and
@@ -338,104 +367,15 @@ export function prefilterPages(entries) {
     return {modelEntries, skippedEntries};
 }
 
-/** Map Polish diacritics to ASCII so titles and URL slugs match the same stems. */
-const DIACRITICS_MAP = Object.freeze({ą: "a", ć: "c", ę: "e", ł: "l", ń: "n", ó: "o", ś: "s", ź: "z", ż: "z"});
-
-export function normalizeAscii(value) {
-    return String(value ?? "")
-        .toLowerCase()
-        .replace(/[ąćęłńóśźż]/gu, (ch) => DIACRITICS_MAP[ch] ?? ch)
-        .replace(/[^a-z0-9]+/gu, " ")
-        .trim();
-}
-
-/**
- * Non-product stems (ASCII, substring match on normalized title+URL).
- * Substring stems cover Polish inflections and URL slugs without diacritics.
- */
-const PREFILTER_NON_PRODUCT_STEMS = Object.freeze([
-    // bank boilerplate / corporate
-    "o banku", "wladz", "zarzad", "nadzorcz", "komitet", "karier", "histori",
-    "komunikat", "aktualnos", "kalendarz", "status", "reklam",
-    // contact / legal / help
-    "kontakt", "pomoc", "regulamin", "rodo", "prywatnos", "polityk", "cookies",
-    "dostepnos", "mapa strony", "szukaj", "wyszukiwark", "test", "start",
-    // banking products that are not mortgage offers
-    "bankowosc internetowa", "logowani", "login", "kartosfera", "sorbnet",
-    "bmr", "rachunek", "konto", "karta", "limit", "lokat", "oszczednos",
-    "platnos", "bezpieczenstw", "ubezpiecz", "emeryt", "inwestycj",
-    // customer segments / other
-    "rolnik", "przedsiebiorc", "firm", "instytucj", "newsletter",
-    // application / document forms
-    "kwestionariusz", "wniosk", "taryf", "zalacznik"
-]);
-
-/**
- * Absolute mortgage protection stems (ASCII). A page whose normalized
- * title+URL contains any of these is NEVER skipped, even if it also matches
- * a non-mortgage stem (e.g. "Karta informacyjna kredytu hipotecznego"
- * matches both "hipotec" and "karta"): mortgage-specific vocabulary always
- * wins because such pages may carry qualifying evidence.
- */
-const PREFILTER_MORTGAGE_ABSOLUTE_STEMS = Object.freeze([
-    "hipotec", "mieszkaniow"
-]);
-
-/**
- * Generic credit/rate protection stems (ASCII). A page containing one of
- * these goes to the model UNLESS it also matches a non-mortgage stem below,
- * which disambiguates it as a different credit product.
- */
-const PREFILTER_CREDIT_STEMS = Object.freeze([
-    "kredyt", "pozyczk", "finans", "oprocent", "procent", "rata", "wibor",
-    "wiron", "rrso", "refinans", "konsumpcyj", "wakacje", "splat",
-    "przeniesieni", "fundusz", "wsparcia"
-]);
-
-/**
- * Non-mortgage credit stems (ASCII). A page whose normalized title+URL
- * contains a credit/rate protection stem AND one of these non-mortgage stems
- * is a different credit product (revolving, overdraft, bridge, consumer,
- * business, agricultural, card, payment-holiday, investment, anniversary,
- * vacation), not a residential mortgage offer, so it is skipped as noise.
- * Verified against the gold set and every exact_offer observed across runs:
- * zero collisions.
- */
-const PREFILTER_NON_MORTGAGE_CREDIT_STEMS = Object.freeze([
-    "rewolwing", "odnawialny", "pomost", "konsumenck", "gotowk", "obrotow",
-    "wakacyj", "jubileusz", "karta", "ror", "rolnik", "inwestycj",
-    "dla firm", "dla-firm", "dlafirm", "firmy i instytucje", "biznes",
-    "przedsiebiorc", "przeniesienie rachunku", "blik", "obrotowy"
-]);
-
 function classifyPrefilterSkip(entry) {
     if (entry.status !== "ok" || typeof entry.evidence !== "string" || entry.evidence.trim() === "") {
         return {label: "unresolved", reason: "no_fetchable_content"};
     }
-    const normalized = normalizeAscii(`${entry.title ?? ""} ${entry.url ?? ""}`);
-    // Mortgage-specific vocabulary always wins: such pages may carry
-    // qualifying evidence even when another stem also matches.
-    if (PREFILTER_MORTGAGE_ABSOLUTE_STEMS.some((stem) => normalized.includes(stem))) {
-        return null;
-    }
-    const hasCreditStem = PREFILTER_CREDIT_STEMS.some((stem) => normalized.includes(stem));
-    if (hasCreditStem) {
-        // A generic credit/rate page is protected UNLESS it is clearly a
-        // different, non-mortgage credit product (e.g. "kredyt konsumencki",
-        // "kredyt w ROR", "karta kredytowa").
-        if (PREFILTER_NON_MORTGAGE_CREDIT_STEMS.some((stem) => normalized.includes(stem))) {
-            return {label: "noise", reason: "non_mortgage_credit_product"};
-        }
-        return null;
-    }
-    if (PREFILTER_NON_PRODUCT_STEMS.some((stem) => normalized.includes(stem))) {
-        return {label: "noise", reason: "non_product_boilerplate"};
-    }
-    return null;
+    return classifyMetadataSkip(entry, {phase: "post_extract"});
 }
 
 /**
- * Build the global ordered page entries of a flat `parallel-extract-pilot/2.0.0`
+ * Build the global ordered page entries of a flat `parallel-extract-pilot/2.1.0`
  * pack: exactly one entry per page record (never per bundle), in bank order
  * then page order, with a stable `p<bank>-<page>` page id.
  *
@@ -492,6 +432,7 @@ export function buildExtractPromptEntries(pack) {
                 bank: bankIdentity,
                 url: page?.url ?? page?.submitted_url ?? null,
                 title: typeof page?.title === "string" ? page.title : null,
+                description: typeof page?.description === "string" ? page.description : null,
                 status: page?.status ?? "unknown",
                 http_status: null,
                 error: page?.status === "ok"
@@ -879,13 +820,15 @@ export function validateModelResponse(parsed, promptMeta) {
 
 /**
  * Deterministic bank rollup from classified pages: exact_offer if any page is
- * exact_offer, else related_page if any related_page, else unresolved if any
- * unresolved, else noise.
+ * exact_offer, else related_page if any related_page, else not_found when the
+ * upstream Search preflight found no dedicated candidate, else unresolved if
+ * any unresolved page exists, else noise.
  */
 export function rollupBanks(reportPages, sourceBanks = []) {
     const bankOrder = [];
     const pagesByBank = new Map();
     const identityByBank = new Map();
+    const preflightByBank = new Map();
     for (const sourceRecord of sourceBanks) {
         const bank = sourceRecord?.bank ?? sourceRecord ?? {};
         const key = bank.institution_id ?? bank.legal_name ?? "unknown";
@@ -895,6 +838,7 @@ export function rollupBanks(reportPages, sourceBanks = []) {
             institution_id: bank.institution_id ?? null,
             legal_name: bank.legal_name ?? bank.institution_id ?? null
         });
+        preflightByBank.set(key, sourceRecord?.preflight ?? null);
         bankOrder.push(key);
     }
     for (const page of reportPages) {
@@ -906,18 +850,22 @@ export function rollupBanks(reportPages, sourceBanks = []) {
                 institution_id: bank.institution_id ?? null,
                 legal_name: bank.legal_name ?? null
             });
+            preflightByBank.set(key, null);
             bankOrder.push(key);
         }
         pagesByBank.get(key).push(page);
     }
     return bankOrder.map((key) => {
         const group = pagesByBank.get(key);
+        const preflight = preflightByBank.get(key);
         const label = group.length === 0
-            ? "unresolved"
+            ? (preflight?.outcome === "not_found" ? "not_found" : "unresolved")
             : group.some((page) => page.label === "exact_offer")
             ? "exact_offer"
             : group.some((page) => page.label === "related_page")
                 ? "related_page"
+                : preflight?.outcome === "not_found"
+                    ? "not_found"
                 : group.some((page) => page.label === "unresolved")
                     ? "unresolved"
                     : "noise";
@@ -934,6 +882,36 @@ export function rollupBanks(reportPages, sourceBanks = []) {
             }))
         };
     });
+}
+
+function buildSourcePreflightSummary(sourceBanks) {
+    const skipped = [];
+    for (const sourceRecord of sourceBanks) {
+        const bank = sourceRecord?.bank ?? {};
+        for (const item of sourceRecord?.preflight?.skipped ?? []) {
+            skipped.push({
+                bank: {
+                    institution_id: bank.institution_id ?? null,
+                    legal_name: bank.legal_name ?? null
+                },
+                ...item
+            });
+        }
+    }
+    return {
+        enabled: sourceBanks.some((record) => record?.preflight?.enabled === true),
+        skipped_candidate_count: skipped.length,
+        not_found_bank_count: sourceBanks.filter((record) => record?.preflight?.outcome === "not_found").length,
+        skipped
+    };
+}
+
+function countBankOutcomes(banks) {
+    const counts = {};
+    for (const bank of banks) {
+        counts[bank.label] = (counts[bank.label] ?? 0) + 1;
+    }
+    return counts;
 }
 
 /**
@@ -953,6 +931,7 @@ export function rollupBanks(reportPages, sourceBanks = []) {
 export function buildReport({source, promptMeta, batches, batchMeta, batchResults, dryRun, model = MODEL, variant = VARIANT, followup = null, skipped = []}) {
     const counts = {exact_offer: 0, related_page: 0, noise: 0, unresolved: 0};
     const reportPages = [];
+    const sourcePreflight = buildSourcePreflightSummary(source.report.banks);
     if (!dryRun) {
         const merged = new Map();
         for (const batchResult of batchResults) {
@@ -1008,6 +987,8 @@ export function buildReport({source, promptMeta, batches, batchMeta, batchResult
             counts[skippedItem.label] += 1;
         }
     }
+    const banks = dryRun ? [] : rollupBanks(reportPages, source.report.banks);
+    const sourcePageCount = promptMeta.page_count + skipped.length;
     const report = {
         schema_version: REPORT_SCHEMA_VERSION,
         generated_at: new Date().toISOString(),
@@ -1017,7 +998,9 @@ export function buildReport({source, promptMeta, batches, batchMeta, batchResult
             sha256: source.sha256,
             schema_version: source.report.schema_version,
             bank_count: source.report.banks.length,
-            page_count: promptMeta.page_count
+            page_count: sourcePageCount,
+            candidate_count: sourcePageCount + sourcePreflight.skipped_candidate_count,
+            preflight_excluded_count: sourcePreflight.skipped_candidate_count
         },
         model: {model, variant},
         prompt: {
@@ -1083,11 +1066,12 @@ export function buildReport({source, promptMeta, batches, batchMeta, batchResult
                         attempts: result.invocation.attempts
                     }))
             },
-        summary: {page_count: reportPages.length, ...counts},
+        preflight: sourcePreflight,
+        summary: {page_count: reportPages.length, ...counts, bank_outcome_counts: countBankOutcomes(banks)},
         prefilter: dryRun
             ? {enabled: true, skipped_page_count: skipped.length, skipped: skipped.map((item) => ({page_id: item.entry.page_id, url: item.entry.url, label: item.label, reason: item.reason}))}
             : {enabled: true, skipped_page_count: skipped.length, skipped: skipped.map((item) => ({page_id: item.entry.page_id, url: item.entry.url, label: item.label, reason: item.reason}))},
-        banks: dryRun ? [] : rollupBanks(reportPages, source.report.banks),
+        banks,
         pages: reportPages
     };
     if (dryRun) {

@@ -40,20 +40,20 @@ import {
     runClassifier,
     validateExtractPack,
     validateModelResponse
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-review-classifier-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-review-classifier-pilot.mjs";
 import {
     ENDPOINT as SEARCH_ENDPOINT,
     REPORT_SCHEMA_VERSION as SEARCH_REPORT_SCHEMA_VERSION,
     runPilot as runSearchPilot
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-search-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-search-pilot.mjs";
 import {
     ENDPOINT as EXTRACT_ENDPOINT,
     REPORT_SCHEMA_VERSION as EXTRACT_REPORT_SCHEMA_VERSION,
     runExtractPilot
-} from "../../.agents/skills/mortgage-refinancing-scan/lib/parallel-extract-pilot.mjs";
+} from "../../.agents/skills/bs-remortgaging-scan/lib/parallel-extract-pilot.mjs";
 
 const ROOT = path.resolve(new URL("../..", import.meta.url).pathname);
-const TOOL = path.join(ROOT, ".agents/skills/mortgage-refinancing-scan/tools/parallel-review-classifier-pilot.mjs");
+const TOOL = path.join(ROOT, ".agents/skills/bs-remortgaging-scan/tools/parallel-review-classifier-pilot.mjs");
 
 const tmpDirs = new Set();
 
@@ -71,6 +71,14 @@ function extractPackFixture() {
         summary: {},
         banks: [{
             bank: {institution_id: "bank_flat", legal_name: "Bank Flat", official_hosts: ["flat.pl"], allowed_redirect_hosts: []},
+            preflight: {
+                enabled: true,
+                skipped_candidate_count: 0,
+                skipped: [],
+                remaining_candidate_count: 4,
+                outcome: "continue",
+                reason: null
+            },
             pages: [
                 {
                     status: "ok",
@@ -1047,6 +1055,14 @@ describe("model response validation", () => {
         const noPages = extractPackFixture();
         delete noPages.banks[0].pages;
         expect(() => validateExtractPack(noPages)).toThrow(/pages\[\]/);
+        const noPreflight = extractPackFixture();
+        delete noPreflight.banks[0].preflight;
+        expect(() => validateExtractPack(noPreflight)).toThrow(/preflight/);
+        const inconsistentPreflight = extractPackFixture();
+        inconsistentPreflight.banks[0].preflight.outcome = "not_found";
+        inconsistentPreflight.banks[0].preflight.reason = null;
+        inconsistentPreflight.banks[0].preflight.remaining_candidate_count = 0;
+        expect(() => validateExtractPack(inconsistentPreflight)).toThrow(/preflight/);
         const noUrl = extractPackFixture();
         delete noUrl.banks[0].pages[0].url;
         expect(() => validateExtractPack(noUrl)).toThrow(/url/);
@@ -1105,6 +1121,52 @@ describe("report building", () => {
             {bank: {institution_id: "b0", legal_name: "B0"}, label: "unresolved", pages: []},
             {bank: {institution_id: "b1", legal_name: "B1"}, label: "noise", pages: [{page_id: "p1", url: "u", label: "noise"}]}
         ]);
+    });
+
+    it("rolls up a preflight-only bank as not_found without invoking Luna", async () => {
+        const pack = extractPackFixture();
+        pack.banks = [{
+            bank: pack.banks[0].bank,
+            preflight: {
+                enabled: true,
+                skipped_candidate_count: 1,
+                skipped: [{
+                    url: "https://flat.pl/",
+                    title: "Bank Flat",
+                    label: "noise",
+                    reason: "homepage_not_product_page"
+                }],
+                remaining_candidate_count: 0,
+                outcome: "not_found",
+                reason: "homepage_only"
+            },
+            pages: []
+        }];
+        const runner = vi.fn();
+
+        const report = await runClassifier({sourceReport: pack, runner});
+
+        expect(runner).not.toHaveBeenCalled();
+        expect(report.preflight).toMatchObject({
+            enabled: true,
+            skipped_candidate_count: 1,
+            not_found_bank_count: 1
+        });
+        expect(report.source_pack).toMatchObject({
+            bank_count: 1,
+            page_count: 0,
+            candidate_count: 1,
+            preflight_excluded_count: 1
+        });
+        expect(report.summary).toMatchObject({
+            page_count: 0,
+            bank_outcome_counts: {not_found: 1}
+        });
+        expect(report.banks).toEqual([{
+            bank: {institution_id: "bank_flat", legal_name: "Bank Flat"},
+            label: "not_found",
+            pages: []
+        }]);
     });
 
     it("records per-batch invocation metadata without duplicating the prompt", async () => {

@@ -23,6 +23,8 @@ docs/HANDOFF.md
 /.agents/skills/*
 !/.agents/skills/bank-market-scan/
 !/.agents/skills/bank-market-scan/**
+!/.agents/skills/bs-remortgaging-scan/
+!/.agents/skills/bs-remortgaging-scan/**
 !/.agents/skills/mortgage-refinancing-scan/
 !/.agents/skills/mortgage-refinancing-scan/**
 

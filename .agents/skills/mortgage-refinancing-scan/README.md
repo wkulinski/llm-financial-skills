@@ -163,9 +163,6 @@ fallback LLM albo dodatkowe powiązanie HTML–PDF.
 - [`schemas/`](./schemas/) — strict JSON Schema;
 - [`docs/adaptation-plan.md`](./docs/adaptation-plan.md) — plan dostosowania
   obecnej implementacji do architektury page-first;
-- [`docs/parallel-pilot-repeatable-verification.md`](./docs/parallel-pilot-repeatable-verification.md)
-  — runbook powtarzalnej weryfikacji eksperymentalnego pilota Parallel
-  Search → Extract → Luna z jednorundowym follow-upem;
 - [`tools/runner.mjs`](./tools/runner.mjs) — controlled runner;
 - [`.opencode/agents/mortgage-refinancing-scan-runner.md`](../../../.opencode/agents/mortgage-refinancing-scan-runner.md)
   — ograniczenia agenta wykonawczego;

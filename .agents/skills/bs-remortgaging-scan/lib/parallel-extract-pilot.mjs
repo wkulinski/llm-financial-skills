@@ -12,6 +12,7 @@ import {
     parsePositiveNumber,
     writeJsonAtomic
 } from "./parallel-search-pilot.mjs";
+import {classifyMetadataSkip} from "./metadata-prefilter.mjs";
 
 export {
     PilotError,
@@ -26,19 +27,21 @@ export {
 /**
  * Isolated bounded Parallel Extract pilot for official offer pages.
  *
- * Consumes a `parallel-search-pilot/1.0.0` report and submits every accepted
- * candidate of each bank, in the exact order written by Search, in sequential
- * batches of at most `MAX_URLS_PER_REQUEST` URLs to
+ * Consumes a `parallel-search-pilot/1.0.0` report, applies the metadata-only
+ * preflight, and submits every remaining candidate of each bank in the exact
+ * order written by Search, in sequential batches of at most
+ * `MAX_URLS_PER_REQUEST` URLs to
  * POST https://api.parallel.ai/v1/extract. There is no local top-k, scoring,
  * candidate selection or recovery from Search rejections: Search is the sole
  * owner of candidate preparation and has already deduplicated candidates by
  * the shared canonical identity.
  *
  * Output is flat and page-first: each bank record keeps bank/search_coverage/
- * submitted_urls/result_errors and page records live directly in
+ * submitted_urls/result_errors/preflight and page records live directly in
  * `banks[*].pages` — one page record per submitted identity (ok, error,
- * unresolved or dry_run). There are no bundles, parent/child relationships or
- * expansion passes.
+ * unresolved or dry_run). Preflight-only exclusions are kept in an audit list;
+ * a bank with no remaining dedicated candidate is marked `not_found`. There
+ * are no bundles, parent/child relationships or expansion passes.
  *
  * Results are mapped back to the submitted pages by the shared canonical
  * identity that treats www/non-www hosts, trailing slashes, default ports,
@@ -52,7 +55,7 @@ export {
  */
 
 export const ENDPOINT = "https://api.parallel.ai/v1/extract";
-export const REPORT_SCHEMA_VERSION = "parallel-extract-pilot/2.0.0";
+export const REPORT_SCHEMA_VERSION = "parallel-extract-pilot/2.1.0";
 export const SOURCE_SCHEMA_VERSION = "parallel-search-pilot/1.0.0";
 
 export const MAX_URLS_PER_REQUEST = 20;
@@ -231,20 +234,44 @@ function searchCoverage(sourceRecord) {
     };
 }
 
+function preflightOutcome(sourceRecord, {candidateCount, submitted, skipped, invalid}) {
+    if (sourceRecord.status !== "ok") {
+        return {outcome: "not_run", reason: "search_not_available"};
+    }
+    if (submitted.length > 0) {
+        return {outcome: "continue", reason: null};
+    }
+    if (candidateCount === 0) {
+        return {outcome: "not_found", reason: "no_search_candidates"};
+    }
+    if (invalid.length > 0 && skipped.length === 0) {
+        return {outcome: "not_found", reason: "no_usable_search_candidate"};
+    }
+    if (skipped.length > 0 && skipped.every((item) => item.reason === "homepage_not_product_page")) {
+        return {outcome: "not_found", reason: "homepage_only"};
+    }
+    return {outcome: "not_found", reason: "no_dedicated_product_candidate"};
+}
+
 /**
  * Build the submission plan for one bank: consume `source.report.banks[*]`
  * candidates in the exact order written by Search, with no top-k, scoring or
  * selection. Each accepted candidate is validated (parseable, credential-free,
- * official host) and deduplicated by the shared canonical identity keeping the
- * first position; invalid or colliding entries become result_errors and are
- * never submitted.
+ * official host), deduplicated by the shared canonical identity keeping the
+ * first position and passed through the metadata-only preflight. Invalid or
+ * colliding entries become result_errors; deterministic noise is retained in
+ * the preflight audit and is never submitted.
  */
 function planBank(sourceRecord) {
     const bank = bankIdentity(sourceRecord.bank);
     const seen = new Set();
     const submitted = [];
     const invalid = [];
-    for (const candidate of Array.isArray(sourceRecord.candidates) ? sourceRecord.candidates : []) {
+    const skipped = [];
+    const candidates = sourceRecord.status === "ok" && Array.isArray(sourceRecord.candidates)
+        ? sourceRecord.candidates
+        : [];
+    for (const candidate of candidates) {
         const candidateUrl = candidate?.canonical_url;
         const parsed = parseResultUrl(candidateUrl);
         if (!parsed.ok) {
@@ -261,13 +288,41 @@ function planBank(sourceRecord) {
             continue;
         }
         seen.add(identity);
+        const metadataSkip = classifyMetadataSkip({
+            url: candidateUrl,
+            title: typeof candidate?.title === "string" ? candidate.title : null,
+            description: typeof candidate?.description === "string" ? candidate.description : null
+        }, {phase: "pre_extract"});
+        if (metadataSkip !== null) {
+            skipped.push({
+                url: candidateUrl,
+                title: typeof candidate?.title === "string" ? candidate.title : null,
+                label: metadataSkip.label,
+                reason: metadataSkip.reason
+            });
+            continue;
+        }
         submitted.push({candidate_url: candidateUrl, identity});
     }
+    const outcome = preflightOutcome(sourceRecord, {
+        candidateCount: candidates.length,
+        submitted,
+        skipped,
+        invalid
+    });
     return {
         bank,
         search_coverage: searchCoverage(sourceRecord),
         submitted,
-        invalid
+        invalid,
+        preflight: {
+            enabled: true,
+            skipped_candidate_count: skipped.length,
+            skipped,
+            remaining_candidate_count: submitted.length,
+            outcome: outcome.outcome,
+            reason: outcome.reason
+        }
     };
 }
 
@@ -510,7 +565,7 @@ function extractDirectLinks(fullContent, {bank, pageIdentity, baseUrl}) {
 
 function pageRecord(result, {submittedUrl, excerptChars, fullContentChars, bank, pageIdentity}) {
     const finalUrl = typeof result.final_url === "string" && result.final_url !== "" ? result.final_url : null;
-    return {
+    const page = {
         status: "ok",
         url: result.url,
         submitted_url: submittedUrl,
@@ -528,6 +583,10 @@ function pageRecord(result, {submittedUrl, excerptChars, fullContentChars, bank,
             baseUrl: finalUrl ?? result.url
         })
     };
+    if (typeof result.description === "string") {
+        page.description = result.description;
+    }
+    return page;
 }
 
 /**
@@ -668,6 +727,7 @@ async function runBankPages(plan, {batchSize, timeoutMs, maxResponseBytes, excer
         bank_record: {
             bank: plan.bank,
             search_coverage: plan.search_coverage,
+            preflight: plan.preflight,
             submitted_urls: plan.submitted.map((root) => root.candidate_url),
             result_errors: resultErrors,
             pages
@@ -680,6 +740,7 @@ function buildDryBank(plan) {
     return {
         bank: plan.bank,
         search_coverage: plan.search_coverage,
+        preflight: plan.preflight,
         submitted_urls: plan.submitted.map((root) => root.candidate_url),
         result_errors: [...plan.invalid],
         pages: plan.submitted.map((root) => ({
@@ -690,8 +751,30 @@ function buildDryBank(plan) {
     };
 }
 
+function buildPreflightSummary(bankResults) {
+    const skipped = [];
+    for (const bankRecord of bankResults) {
+        for (const item of bankRecord.preflight?.skipped ?? []) {
+            skipped.push({
+                bank: {
+                    institution_id: bankRecord.bank?.institution_id ?? null,
+                    legal_name: bankRecord.bank?.legal_name ?? null
+                },
+                ...item
+            });
+        }
+    }
+    return {
+        enabled: true,
+        skipped_candidate_count: skipped.length,
+        not_found_bank_count: bankResults.filter((record) => record.preflight?.outcome === "not_found").length,
+        skipped
+    };
+}
+
 function buildPack({source, bankResults, limits, dryRun, estimatedCostUsd, apiRequestCount, elapsedMs}) {
     const pages = bankResults.flatMap((record) => record.pages);
+    const preflight = buildPreflightSummary(bankResults);
     return {
         schema_version: REPORT_SCHEMA_VERSION,
         generated_at: new Date().toISOString(),
@@ -702,10 +785,13 @@ function buildPack({source, bankResults, limits, dryRun, estimatedCostUsd, apiRe
             schema_version: source.report.schema_version
         },
         config: limits,
+        preflight,
         banks: bankResults,
         summary: {
             bank_count: bankResults.length,
             submitted: pages.length,
+            preflight_excluded: preflight.skipped_candidate_count,
+            not_found_bank_count: preflight.not_found_bank_count,
             extracted: pages.filter((page) => page.status === "ok").length,
             error: pages.filter((page) => page.status === "error" || page.status === "unresolved").length,
             api_request_count: apiRequestCount,
@@ -754,7 +840,7 @@ export async function runExtractPilot(options) {
     const submittedTotal = plans.reduce((sum, plan) => sum + plan.submitted.length, 0);
     const estimatedCostUsd = validateBudget(submittedTotal, maxCostUsd);
 
-    if (!dryRun && (typeof apiKey !== "string" || apiKey.trim() === "")) {
+    if (!dryRun && submittedTotal > 0 && (typeof apiKey !== "string" || apiKey.trim() === "")) {
         throw new PilotError("missing_api_key", "PARALLEL_API_KEY is required for a live run", {exitCode: 20});
     }
 

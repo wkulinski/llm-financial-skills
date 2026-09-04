@@ -559,13 +559,17 @@ function analyzeResults(bank, payload, {latencyMs, httpStatus}) {
         }
         seen.add(identity);
         officialCount += 1;
-        candidates.push({
+        const candidate = {
             domain_match: true,
             canonical_url: canonical.url,
             title: typeof result?.title === "string" ? result.title : null,
             publish_date: typeof result?.publish_date === "string" ? result.publish_date : null,
             excerpts: Array.isArray(result?.excerpts) ? result.excerpts : []
-        });
+        };
+        if (typeof result?.description === "string") {
+            candidate.description = result.description;
+        }
+        candidates.push(candidate);
     }
     const record = {
         bank: bankRecord(bank),

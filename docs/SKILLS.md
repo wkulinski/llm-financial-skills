@@ -13,6 +13,7 @@
 - `$gh-issue-status-set`
 - `$git-commit`
 - `$handoff-refresh`
+- `$bs-remortgaging-scan`
 - `$mortgage-refinancing-scan`
 - `$plan-execute`
 - `$qa-run`

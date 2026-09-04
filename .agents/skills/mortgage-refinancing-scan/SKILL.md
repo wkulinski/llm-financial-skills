@@ -113,15 +113,6 @@ z `decision_status`, główny arkusz zawiera tylko `qualified && export_ready`, 
 pozostałe wpisy trafiają do arkusza Review. XLSX jest tworzony bez dodatkowej
 zależności runtime.
 
-## Eksperymentalny pilot Parallel
-
-Izolowany pilot Parallel Search → Extract → Luna z jednorundowym,
-model-requested follow-upem nie jest częścią powyższego produkcyjnego lifecycle.
-Jego powtarzalna procedura offline/replay/live znajduje się w
-[`docs/parallel-pilot-repeatable-verification.md`](./docs/parallel-pilot-repeatable-verification.md).
-Runbook jest źródłem prawdy wyłącznie dla weryfikacji tego pilota; nie zmienia
-kontraktów produkcyjnego runnera, publikacji ani eksportu.
-
 Sprawdzenie kontraktów:
 
 ```bash

@@ -25,7 +25,7 @@ const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_ROOT = path.resolve(TOOL_DIR, "..");
 const REPO_ROOT = path.resolve(SKILL_ROOT, "../../..");
 const DEFAULT_REGISTRY = path.join(REPO_ROOT, "data", "base", "institutions.current.json");
-const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "mortgage-refinancing-scan", "parallel-search-pilot");
+const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "bs-remortgaging-scan", "parallel-search-pilot");
 
 const VALUE_OPTIONS = new Set([
     "registry",

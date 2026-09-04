@@ -21,8 +21,9 @@ import {
 } from "../lib/parallel-extract-pilot.mjs";
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.resolve(TOOL_DIR, "../../..");
-const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "mortgage-refinancing-scan", "parallel-extract-pilot");
+const SKILL_ROOT = path.resolve(TOOL_DIR, "..");
+const REPO_ROOT = path.resolve(SKILL_ROOT, "../../..");
+const DEFAULT_OUTPUT_DIR = path.join(REPO_ROOT, "var", "agent", "cache", "bs-remortgaging-scan", "parallel-extract-pilot");
 
 const VALUE_OPTIONS = new Set([
     "input",
@@ -70,9 +71,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         process.stdout.write(`${JSON.stringify({
             status: dryRun ? "dry_run" : "completed",
             output_path: path.relative(process.cwd(), outputPath),
-            bank_count: pack.summary.bank_count,
-            submitted: pack.summary.submitted,
-            extracted: pack.summary.extracted,
+             bank_count: pack.summary.bank_count,
+             submitted: pack.summary.submitted,
+             preflight_excluded: pack.summary.preflight_excluded,
+             not_found_bank_count: pack.summary.not_found_bank_count,
+             extracted: pack.summary.extracted,
             error: pack.summary.error,
             api_request_count: pack.summary.api_request_count,
             estimated_cost_usd: pack.summary.estimated_cost_usd
