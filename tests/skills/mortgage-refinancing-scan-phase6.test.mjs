@@ -4,7 +4,7 @@ import {spawn} from "node:child_process";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
 
-import {afterEach, describe, expect, it} from "vitest";
+import {afterAll, afterEach, beforeAll, describe, expect, it} from "vitest";
 
 import {exportPublishedWorkbook} from "../../.agents/skills/mortgage-refinancing-scan/lib/export-workbook.mjs";
 import {auditPublication} from "../../.agents/skills/mortgage-refinancing-scan/lib/publication-audit.mjs";
@@ -23,6 +23,30 @@ let pointerBefore;
 let sequence = 0;
 
 describe("mortgage-refinancing-scan Phase 6 full report", () => {
+    beforeAll(() => {
+        pointerBefore = readOptional(path.join(PUBLISHED_ROOT, "current.json"));
+        if (fs.existsSync(RUNS_ROOT)) {
+            for (const entry of fs.readdirSync(RUNS_ROOT, {withFileTypes: true})) {
+                if (entry.isDirectory()) {
+                    fs.rmSync(path.join(RUNS_ROOT, entry.name), {recursive: true, force: true});
+                }
+            }
+        }
+    });
+
+    afterAll(() => {
+        for (const runId of activeRuns) {
+            fs.rmSync(path.join(RUNS_ROOT, runId), {recursive: true, force: true});
+            fs.rmSync(path.join(PUBLISHED_ROOT, runId), {recursive: true, force: true});
+        }
+        activeRuns.clear();
+        if (pointerBefore === null) fs.rmSync(path.join(PUBLISHED_ROOT, "current.json"), {force: true});
+        else if (pointerBefore !== undefined) {
+            fs.mkdirSync(PUBLISHED_ROOT, {recursive: true});
+            fs.writeFileSync(path.join(PUBLISHED_ROOT, "current.json"), pointerBefore);
+        }
+    });
+
     afterEach(() => {
         for (const runId of activeRuns) {
             fs.rmSync(path.join(RUNS_ROOT, runId), {recursive: true, force: true});

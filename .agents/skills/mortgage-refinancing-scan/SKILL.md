@@ -6,7 +6,7 @@ description: Standalone contract foundation for the exact-scope mortgage refinan
 # mortgage-refinancing-scan
 
 Źródłem prawdy dla tego skilla jest
-`docs/draft/bank-market-scan-core-reboot-plan.md`. Runtime używa wyłącznie
+`docs/bank-market-scan-core-reboot-plan.md`. Runtime używa wyłącznie
 dedykowanego katalogu `data/mortgage-refinancing-scan/` i nie korzysta z
 legacy decision state.
 
@@ -112,6 +112,15 @@ snapshot, evidence, publication, pointer i hashe; exporter wylicza `qualifies`
 z `decision_status`, główny arkusz zawiera tylko `qualified && export_ready`, a
 pozostałe wpisy trafiają do arkusza Review. XLSX jest tworzony bez dodatkowej
 zależności runtime.
+
+## Eksperymentalny pilot Parallel
+
+Izolowany pilot Parallel Search → Extract → Luna z jednorundowym,
+model-requested follow-upem nie jest częścią powyższego produkcyjnego lifecycle.
+Jego powtarzalna procedura offline/replay/live znajduje się w
+[`docs/parallel-pilot-repeatable-verification.md`](./docs/parallel-pilot-repeatable-verification.md).
+Runbook jest źródłem prawdy wyłącznie dla weryfikacji tego pilota; nie zmienia
+kontraktów produkcyjnego runnera, publikacji ani eksportu.
 
 Sprawdzenie kontraktów:
 

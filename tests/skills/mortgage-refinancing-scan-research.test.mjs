@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 
-import {afterEach, describe, expect, it} from 'vitest';
+import {afterAll, afterEach, beforeAll, describe, expect, it} from 'vitest';
 
 import {mergeInstitutionRegistries} from '../../.agents/skills/mortgage-refinancing-scan/lib/institution-list.mjs';
 import {buildEvidenceForEntry, buildEvidenceRecord} from '../../.agents/skills/mortgage-refinancing-scan/lib/evidence.mjs';
@@ -34,6 +34,26 @@ const activeRuns = new Set();
 let sequence = 0;
 
 describe('mortgage-refinancing-scan Phase 3 research vertical slice', () => {
+    beforeAll(() => {
+        if (fs.existsSync(RUNS_ROOT)) {
+            for (const entry of fs.readdirSync(RUNS_ROOT, {withFileTypes: true})) {
+                if (entry.isDirectory()) {
+                    fs.rmSync(path.join(RUNS_ROOT, entry.name), {recursive: true, force: true});
+                }
+            }
+        }
+        fs.rmSync(CACHE_ROOT, {recursive: true, force: true});
+    });
+
+    afterAll(() => {
+        for (const runId of activeRuns) {
+            fs.rmSync(path.join(RUNS_ROOT, runId), {recursive: true, force: true});
+            fs.rmSync(path.join(PUBLISHED_ROOT, runId), {recursive: true, force: true});
+        }
+        activeRuns.clear();
+        fs.rmSync(CACHE_ROOT, {recursive: true, force: true});
+    });
+
     afterEach(() => {
         for (const runId of activeRuns) {
             fs.rmSync(path.join(RUNS_ROOT, runId), {recursive: true, force: true});

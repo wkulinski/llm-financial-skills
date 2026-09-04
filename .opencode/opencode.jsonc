@@ -28,7 +28,6 @@
             "/tmp/**/.*/*": "allow",
             "/tmp/**/.*/*/**": "allow"
         },
-        "mate_*": "deny"
     },
     "skills": {
         "paths": [
@@ -44,15 +43,17 @@
             "prompt": "Stosuj ./AGENTS.md oraz aktywny skill jako źródła prawdy. Każdy repository-context wykonuj wyłącznie według kanonicznej polityki ./.agents/skills/_shared/references/repository-context-hybrid.md; nie deleguj scouta bez decyzji helpera i nie obchodź walidacji. Po prepare zawsze zakończ przebieg przez finalize albo abort, także po błędzie. Po zwalidowanym raporcie możesz wykonywać punktowe odczyty potrzebne do implementacji lub review.",
             "permission": {
                 "task": {
-                    "*": "deny",
-                    "mortgage-refinancing-scan-runner": "allow"
+                    "*": "allow"
                 },
                 "webfetch": "ask"
             }
         },
-        "runtime-diagnostician": {
+        "mortgage-refinancing-scan-runner": {
             "permission": {
-                "mate_*": "allow"
+                "task": {
+                    "*": "deny",
+                    "mortgage-refinancing-scan-runner": "allow"
+                }
             }
         }
     },

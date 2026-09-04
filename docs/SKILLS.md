@@ -1,7 +1,9 @@
 # Skills Index
 
+- `$agent-cache-clear`
 - `$bank-market-scan`
 - `$code-implement`
+- `$code-review`
 - `$commit-message-write`
 - `$context-refresh`
 - `$docs-sync`
@@ -12,7 +14,9 @@
 - `$git-commit`
 - `$handoff-refresh`
 - `$mortgage-refinancing-scan`
+- `$plan-execute`
 - `$qa-run`
 - `$review-quick`
 - `$rules-sync`
 - `$skills-index-refresh`
+- `$task-plan`

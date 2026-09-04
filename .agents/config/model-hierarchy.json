@@ -1,0 +1,25 @@
+{
+    "_comment": "Copy this file to <project-root>/.agents/config/model-hierarchy.json, then replace every example profile with an exact model and reasoning pair available in that project.",
+    "_ordering_comment": "Keep profiles ordered from the strongest pair to the weakest acceptable pair, like a leaderboard. The executor compares array indexes and treats a current profile as sufficient when its index is less than or equal to the required profile index.",
+    "_reasoning_comment": "Each model and reasoning combination is a separate profile. Use the exact identifiers exposed by the runtime; do not add aliases or profiles whose reasoning level cannot be observed.",
+    "version": 1,
+    "order": "strongest-to-weakest",
+    "profiles": [
+        {
+            "model": "openai/gpt-5.6-sol",
+            "reasoning": "medium"
+        },
+        {
+            "model": "openai/gpt-5.6-luna",
+            "reasoning": "max"
+        },
+        {
+            "model": "openai/gpt-5.6-luna",
+            "reasoning": "xhigh"
+        },
+        {
+            "model": "openai/gpt-5.6-luna",
+            "reasoning": "high"
+        }
+    ]
+}
